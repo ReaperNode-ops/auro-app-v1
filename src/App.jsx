@@ -3472,6 +3472,10 @@ export default function App() {
 
   return (
     <>
+<div style={{color:"red",fontSize:40,zIndex:999999,position:"fixed",top:20,left:20}}>
+DEBUG VERSION
+</div>
+    <>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0;}
         body{background:${T.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:${T.text};-webkit-font-smoothing:antialiased;}
