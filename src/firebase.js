@@ -9,6 +9,8 @@ import {
   signInWithEmailAndPassword,
   sendEmailVerification,
   verifyBeforeUpdateEmail,
+  reauthenticateWithCredential,
+  EmailAuthProvider,
   updateProfile,
   signOut,
   deleteUser,
@@ -86,17 +88,36 @@ export async function updateDisplayName(newName) {
 }
  
 /**
- * Send a verification email to newEmail.
- * Firebase only applies the address change after the user clicks the link.
- * The current email stays active until then — this is intentional and secure.
+ * Re-authenticate the current user with their password.
+ * Must be called before verifyBeforeUpdateEmail when Firebase throws
+ * auth/requires-recent-login (session older than ~5 minutes).
  *
- * Throws auth/requires-recent-login if the session is too old.
- * Throws auth/email-already-in-use if the address belongs to another account.
- * Throws auth/invalid-email if the format is bad.
+ * Throws auth/wrong-password / auth/invalid-credential on bad password.
+ * Throws auth/too-many-requests on rate limit.
+ */
+export async function reauthenticate(password) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("No user signed in.");
+  const credential = EmailAuthProvider.credential(user.email, password);
+  await reauthenticateWithCredential(user, credential);
+}
+ 
+/**
+ * Send a verification email to newEmail via verifyBeforeUpdateEmail().
+ * Firebase only applies the address change after the user clicks the link —
+ * the current email is NEVER changed by this call.
+ *
+ * Throws { code: "auth/requires-recent-login" } when the session is stale.
+ * The caller must prompt for password, call reauthenticate(), then retry.
+ *
+ * Throws auth/email-already-in-use, auth/invalid-email on bad input.
  */
 export async function requestEmailChange(newEmail) {
   const user = auth.currentUser;
   if (!user) throw new Error("No user signed in.");
+  // verifyBeforeUpdateEmail is the only correct Firebase v9 API for this.
+  // It sends a link to newEmail; Firebase applies the change only after click.
+  // It does NOT call updateEmail() — the current email stays active.
   await verifyBeforeUpdateEmail(user, newEmail.trim());
 }
  
@@ -142,7 +163,7 @@ export function friendlyAuthError(error) {
     "auth/invalid-credential":      "Incorrect email or password.",
     "auth/too-many-requests":       "Too many attempts. Please wait a moment and try again.",
     "auth/network-request-failed":  "Network error. Check your connection.",
-    "auth/requires-recent-login":   "For security, please sign out and sign back in before changing your email.",
+    "auth/requires-recent-login":   "Please confirm your password to continue.",
     "auth/user-disabled":           "This account has been disabled.",
     "auth/operation-not-allowed":   "Email/password accounts are not enabled.",
     "auth/missing-new-email":       "Please enter a new email address.",
