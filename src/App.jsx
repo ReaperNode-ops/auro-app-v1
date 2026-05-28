@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import AuthScreen from "./AuthScreen.jsx";
+import { geminiChat, getDailyUsage, incrementDailyUsage } from "./gemini.js";
 import {
   auth,
   reload,
@@ -2118,70 +2119,92 @@ function TrackingPage({ isPremium, onUpgrade, answers }) {
 
 // ── AI Chat Page ───────────────────────────────────────────────────────────────
 // Defined OUTSIDE App — critical for stable input refs and no keyboard dismissal
-const MOCK_RESPONSES = [
-  "Based on your profile, I'd focus on building one core skill deeply before expanding. Which of your top income paths feels most energising right now?",
-  "Consistency beats intensity every time. You have a 14-day streak — that's real momentum. What's one small action you can take in the next hour?",
-  "Looking at your goals, the biggest gap I see is between intention and execution. Let's fix that. What's the first goal you want to make real progress on this week?",
-  "Your Auro Score of 742 is strong. To push past 800, focus on your networking habit — it's your lowest consistency score. Want a specific plan?",
-  "Great question. The fastest path to income isn't always the most obvious one. Given your skills, I'd prioritise client work before building products. Here's why...",
-  "Discipline is a skill, not a trait. You build it by making commitments small enough that skipping feels worse than doing. What habit do you want to lock in?",
-];
-
-function AIChatPage({ isPremium, onUpgrade, userProfile, userStats }) {
-  const FREE_LIMIT = 3;
+function AIChatPage({ isPremium, onUpgrade, userProfile, userStats, answers, firebaseUid }) {
+  const FREE_LIMIT    = 3;
   const PREMIUM_LIMIT = 25;
-  const limit = isPremium ? PREMIUM_LIMIT : FREE_LIMIT;
+  const limit         = isPremium ? PREMIUM_LIMIT : FREE_LIMIT;
 
-  const [messages, setMessages] = useState([]);
-  const [inputText, setInputText] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [msgsUsed, setMsgsUsed] = useState(0);
+  const [messages,        setMessages]        = useState([]);
+  const [inputText,       setInputText]       = useState("");
+  const [isTyping,        setIsTyping]        = useState(false);
+  const [msgsUsed,        setMsgsUsed]        = useState(() => getDailyUsage(firebaseUid));
   const [showLimitBanner, setShowLimitBanner] = useState(false);
+  const [aiError,         setAiError]         = useState("");
   const messagesEndRef = useRef(null);
-  const inputRef = useRef(null);
+  const inputRef       = useRef(null);
 
   const suggestions = [
     "What should I focus on today?",
     "Help me stay disciplined",
-    "Analyze my progress",
-    "Career path advice",
-    "Motivation boost",
+    "Analyse my progress",
+    "Best income path for me",
+    "Give me a motivation boost",
   ];
 
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior:"smooth" });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isTyping]);
 
-  const sendMessage = (text) => {
+  const buildHistory = (currentMessages) =>
+    currentMessages.slice(-10).map(m => ({ role: m.role, text: m.text }));
+
+  const sendMessage = async (text) => {
     const trimmed = (text || inputText).trim();
-    if (!trimmed) return;
+    if (!trimmed || isTyping) return;
+
     if (msgsUsed >= limit) { setShowLimitBanner(true); return; }
 
-    const userMsg = { id:Date.now(), role:"user", text:trimmed, time: new Date().toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" }) };
+    const userMsg = {
+      id:   Date.now(),
+      role: "user",
+      text: trimmed,
+      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+    };
     setMessages(prev => [...prev, userMsg]);
     setInputText("");
-    setMsgsUsed(n => n + 1);
+    setAiError("");
     setIsTyping(true);
 
-    // Simulate AI response — replace with real API call
-    const delay = 800 + Math.random() * 1200;
-    setTimeout(() => {
+    const newCount = incrementDailyUsage(firebaseUid);
+    setMsgsUsed(newCount);
+
+    try {
+      const userContext = {
+        name:     userProfile?.name,
+        score:    userStats?.score,
+        streak:   userStats?.streak,
+        goals:    userStats?.goals,
+        progress: userStats?.progress,
+        isPremium,
+        answers:  answers ?? {},
+      };
+      const responseText = await geminiChat(trimmed, buildHistory(messages), userContext);
+      setMessages(prev => [...prev, {
+        id:   Date.now() + 1,
+        role: "ai",
+        text: responseText,
+        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+      }]);
+    } catch (err) {
+      setAiError(err?.message ?? "Something went wrong. Please try again.");
+      const refunded = Math.max(0, newCount - 1);
+      setMsgsUsed(refunded);
+      try {
+        const d = new Date();
+        const dk = `auro_chat_usage_${firebaseUid ?? "anon"}_${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+        localStorage.setItem(dk, String(refunded));
+      } catch (_) {}
+    } finally {
       setIsTyping(false);
-      const response = MOCK_RESPONSES[Math.floor(Math.random() * MOCK_RESPONSES.length)];
-      const aiMsg = { id:Date.now() + 1, role:"ai", text: isPremium ? response : response.slice(0, 180) + (response.length > 180 ? "..." : ""), time: new Date().toLocaleTimeString([], { hour:"2-digit", minute:"2-digit" }) };
-      setMessages(prev => [...prev, aiMsg]);
-    }, delay);
+    }
   };
 
-  const handleSuggestion = (text) => {
-    sendMessage(text);
-  };
-
-  const remaining = Math.max(0, limit - msgsUsed);
+  const remaining   = Math.max(0, limit - msgsUsed);
   const hasMessages = messages.length > 0;
 
   return (
     <div style={{ display:"flex", flexDirection:"column", minHeight:440, animation:"fadeIn 0.35s ease" }}>
+
       {/* Header */}
       <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, paddingBottom:14, borderBottom:`1px solid ${T.border}` }}>
         <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -2191,7 +2214,7 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats }) {
           </div>
           <div>
             <div style={{ fontSize:14, fontWeight:800, color:T.text }}>Auro AI Coach</div>
-            <div style={{ fontSize:11, color:"#34d399", fontWeight:600 }}>● Active</div>
+            <div style={{ fontSize:11, color:"#34d399", fontWeight:600 }}>● Gemini 2.0 Flash</div>
           </div>
         </div>
         <div style={{ textAlign:"right" }}>
@@ -2207,7 +2230,7 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats }) {
         </div>
       </div>
 
-      {/* Message limit banner */}
+      {/* Limit banner */}
       {showLimitBanner && (
         <div style={{ background:`${T.gold}15`, border:`1px solid ${T.gold}40`, borderRadius:14, padding:"12px 14px", marginBottom:12, animation:"fadeIn 0.2s ease" }}>
           <div style={{ fontSize:13, fontWeight:700, color:T.gold, marginBottom:4 }}>Daily limit reached</div>
@@ -2216,14 +2239,22 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats }) {
         </div>
       )}
 
-      {/* Messages or empty state */}
+      {/* AI error banner */}
+      {aiError && (
+        <div style={{ background:"#450a0a", border:"1px solid #f8717160", borderRadius:12, padding:"10px 14px", marginBottom:12, fontSize:12, color:"#f87171", lineHeight:1.45, animation:"fadeIn 0.2s ease" }}>
+          ⚠ {aiError}
+          <span onClick={() => setAiError("")} style={{ float:"right", cursor:"pointer", opacity:0.7 }}>✕</span>
+        </div>
+      )}
+
+      {/* Messages */}
       <div style={{ flex:1, overflowY:"auto", marginBottom:12, minHeight:240, maxHeight:340 }}>
         {!hasMessages ? (
           <div style={{ textAlign:"center", padding:"24px 0" }}>
             <div style={{ fontSize:44, marginBottom:14 }}>🧠</div>
             <h3 style={{ fontSize:18, fontWeight:900, color:T.text, margin:"0 0 8px", fontFamily:"Georgia,serif" }}>Your AI Coach is Ready</h3>
-            <p style={{ fontSize:13, color:T.muted, lineHeight:1.65, marginBottom:24, maxWidth:280, margin:"0 auto 24px" }}>
-              Ask anything about your career, goals, habits, or strategy. I know your profile and progress.
+            <p style={{ fontSize:13, color:T.muted, lineHeight:1.65, maxWidth:280, margin:"0 auto 24px" }}>
+              Ask anything about your career, goals, habits, or income strategy. I know your profile and progress.
             </p>
             {!isPremium && (
               <div style={{ background:T.card, border:`1px solid ${T.border}`, borderRadius:12, padding:"10px 14px", marginBottom:20, display:"inline-block" }}>
@@ -2243,16 +2274,19 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats }) {
                   </div>
                 )}
                 <div style={{
-                  maxWidth:"82%", padding:"11px 14px", borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
-                  background: msg.role === "user" ? T.gradPrimary : T.card,
-                  border: msg.role === "ai" ? `1px solid ${T.border}` : "none",
-                  color: msg.role === "user" ? "#0a0800" : T.text,
+                  maxWidth:"82%", padding:"11px 14px",
+                  borderRadius: msg.role === "user" ? "16px 16px 4px 16px" : "16px 16px 16px 4px",
+                  background:   msg.role === "user" ? T.gradPrimary : T.card,
+                  border:       msg.role === "ai" ? `1px solid ${T.border}` : "none",
+                  color:        msg.role === "user" ? "#0a0800" : T.text,
                   fontSize:13, lineHeight:1.6, fontWeight: msg.role === "user" ? 600 : 400,
-                  boxShadow: msg.role === "user" ? `0 0 16px ${T.gold}30` : "none",
+                  boxShadow:    msg.role === "user" ? `0 0 16px ${T.gold}30` : "none",
                 }}>
                   {msg.text}
                 </div>
-                {msg.role === "user" && <span style={{ fontSize:10, color:T.muted, marginTop:3 }}>{msg.time}</span>}
+                {msg.role === "user" && (
+                  <span style={{ fontSize:10, color:T.muted, marginTop:3 }}>{msg.time}</span>
+                )}
               </div>
             ))}
             {isTyping && (
@@ -2274,29 +2308,29 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats }) {
       {!hasMessages && (
         <div style={{ display:"flex", gap:7, flexWrap:"wrap", marginBottom:14 }}>
           {suggestions.map((s, i) => (
-            <button key={i} onClick={() => handleSuggestion(s)} style={{ padding:"7px 12px", borderRadius:20, border:`1px solid ${T.border}`, background:T.card, color:T.text, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s", whiteSpace:"nowrap" }}>
+            <button key={i} onClick={() => sendMessage(s)} style={{ padding:"7px 12px", borderRadius:20, border:`1px solid ${T.border}`, background:T.card, color:T.text, fontSize:12, fontWeight:600, cursor:"pointer", fontFamily:"inherit", transition:"all 0.15s", whiteSpace:"nowrap" }}>
               {s}
             </button>
           ))}
         </div>
       )}
 
-      {/* Input — key fix: input is in a stable component, no inline component creation above */}
+      {/* Input */}
       <div style={{ display:"flex", gap:8, alignItems:"flex-end", paddingTop:10, borderTop:`1px solid ${T.border}` }}>
         <input
           ref={inputRef}
           value={inputText}
           onChange={e => setInputText(e.target.value)}
           onKeyDown={e => e.key === "Enter" && !e.shiftKey && sendMessage()}
-          placeholder={msgsUsed >= limit ? "Daily limit reached" : "Ask your AI coach..."}
-          disabled={msgsUsed >= limit && !isPremium}
+          placeholder={msgsUsed >= limit ? "Daily limit reached" : "Ask your AI coach\u2026"}
+          disabled={(msgsUsed >= limit && !isPremium) || isTyping}
           maxLength={500}
           style={{
             flex:1, padding:"11px 14px", borderRadius:13,
             border:`1px solid ${inputText ? T.primary+"60" : T.border}`,
-            background: T.card, color:T.text, fontSize:14,
+            background:T.card, color:T.text, fontSize:14,
             fontFamily:"inherit", outline:"none", resize:"none",
-            opacity: msgsUsed >= limit && !isPremium ? 0.5 : 1,
+            opacity: (msgsUsed >= limit && !isPremium) ? 0.5 : 1,
             transition:"border-color 0.18s",
           }}
         />
@@ -2306,18 +2340,18 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats }) {
           style={{
             width:42, height:42, borderRadius:12, border:"none", flexShrink:0,
             background: inputText.trim() && !isTyping ? T.gradPrimary : T.border,
-            color: inputText.trim() ? "#0a0800" : T.muted,
-            cursor: inputText.trim() && !isTyping ? "pointer" : "default",
+            color:      inputText.trim() && !isTyping ? "#0a0800" : T.muted,
+            cursor:     inputText.trim() && !isTyping ? "pointer" : "default",
             display:"flex", alignItems:"center", justifyContent:"center",
             fontSize:16, transition:"all 0.18s",
-            boxShadow: inputText.trim() ? `0 0 12px ${T.gold}40` : "none",
+            boxShadow: inputText.trim() && !isTyping ? `0 0 12px ${T.gold}40` : "none",
           }}
-        >
-          ↑
-        </button>
+        >\u2191</button>
       </div>
       {inputText.length > 400 && (
-        <div style={{ fontSize:10, color: inputText.length >= 500 ? "#f87171" : T.muted, textAlign:"right", marginTop:4 }}>{inputText.length}/500</div>
+        <div style={{ fontSize:10, color: inputText.length >= 500 ? "#f87171" : T.muted, textAlign:"right", marginTop:4 }}>
+          {inputText.length}/500
+        </div>
       )}
     </div>
   );
@@ -3472,10 +3506,6 @@ export default function App() {
 
   return (
     <>
-<div style={{color:"red",fontSize:40,zIndex:999999,position:"fixed",top:20,left:20}}>
-DEBUG VERSION
-</div>
-    <>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0;}
         body{background:${T.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:${T.text};-webkit-font-smoothing:antialiased;}
@@ -3537,7 +3567,7 @@ DEBUG VERSION
             )}
             {screen === "nav-chat" && (
               emailVerified
-                ? <AIChatPage isPremium={isPremium} onUpgrade={() => setScreen("nav-subscription")} userProfile={userProfile} userStats={userStats} />
+                ? <AIChatPage isPremium={isPremium} onUpgrade={() => setScreen("nav-subscription")} userProfile={userProfile} userStats={userStats} answers={answers} firebaseUid={firebaseUser?.uid} />
                 : <EmailVerificationScreen email={userProfile.email} onResend={() => showToast("Verification email sent.", "success")} onVerified={async () => { const ok = await checkEmailVerified(); if (ok) { setEmailVerified(true); showToast("Email verified! Welcome to Auro.", "success"); } }} />
             )}
             {screen === "nav-account" && <AccountPage isPremium={isPremium} billingCycle={billingCycle} subScreen={subScreen} setSubScreen={setSubScreen} userProfile={userProfile} userStats={userStats} notifSettings={notifSettings} setNotifSettings={setNotifSettings} privacySettings={privacySettings} setPrivacySettings={setPrivacySettings} aiSettings={aiSettings} setAiSettings={setAiSettings} editName={editName} setEditName={setEditName} editEmail={editEmail} setEditEmail={setEditEmail} setUserProfile={setUserProfile} onSignOut={handleSignOut} onDeleteAccount={handleDeleteAccount} onToast={showToast} onUpgrade={() => setScreen("nav-subscription")} />}
