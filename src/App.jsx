@@ -6,6 +6,8 @@ import {
   onAuthChange,
   checkEmailVerified,
   resendVerificationEmail,
+  updateDisplayName,
+  requestEmailChange,
   firebaseSignOut,
   firebaseDeleteAccount,
   friendlyAuthError,
@@ -2344,34 +2346,190 @@ function SubScreenShell({ title, children, onBack }) {
 }
 
 // ── Profile Edit Screen (top-level — FIXES keyboard dismiss bug) ───────────────
-function ProfileEditScreen({ editName, setEditName, editEmail, setEditEmail, onSave, onBack, onToast }) {
+// Name:  saved immediately via Firebase updateProfile — no security boundary.
+// Email: never saved locally. Sends a verification link to the NEW address via
+//        verifyBeforeUpdateEmail. Firebase applies the change only after the
+//        user clicks that link. The old email stays active until then.
+function ProfileEditScreen({ currentName, currentEmail, onNameSaved, onEmailVerificationSent, onBack, onToast }) {
+  // ── Name state ─────────────────────────────────────────────────────────────
+  const [name, setName]           = useState(currentName);
+  const [nameSaving, setNameSaving] = useState(false);
+
+  // ── Email state ────────────────────────────────────────────────────────────
+  const [newEmail, setNewEmail]         = useState("");
+  const [emailError, setEmailError]     = useState("");
+  const [emailSending, setEmailSending] = useState(false);
+  // "idle" | "sent" — tracks whether the verification email was dispatched
+  const [emailStep, setEmailStep]       = useState("idle");
+
+  const emailChanged = newEmail.trim() !== "" && newEmail.trim() !== currentEmail;
+
+  // Basic format check — runs on every keystroke so feedback is instant
+  const validateEmailFormat = (value) => {
+    if (!value.trim()) return "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) return "Please enter a valid email address.";
+    if (value.trim() === currentEmail) return "This is already your current email.";
+    return "";
+  };
+
+  const handleEmailChange = (value) => {
+    setNewEmail(value);
+    setEmailError(validateEmailFormat(value));
+    if (emailStep === "sent") setEmailStep("idle"); // reset if they edit again
+  };
+
+  // ── Save name ──────────────────────────────────────────────────────────────
+  const handleSaveName = async () => {
+    const trimmed = name.trim();
+    if (!trimmed) { onToast("Name cannot be empty.", "error"); return; }
+    if (trimmed === currentName) { onToast("No changes to save.", "info"); return; }
+    setNameSaving(true);
+    try {
+      await updateDisplayName(trimmed);
+      onNameSaved(trimmed);          // lets App update userProfile.name
+      onToast("Name updated.", "success");
+    } catch (err) {
+      onToast(friendlyAuthError(err), "error");
+    } finally {
+      setNameSaving(false);
+    }
+  };
+
+  // ── Request email change ───────────────────────────────────────────────────
+  // Does NOT apply the change. Sends a verification link to the new address.
+  // Firebase applies the change only after the user clicks that link.
+  const handleRequestEmailChange = async () => {
+    const trimmed = newEmail.trim();
+    const fmt = validateEmailFormat(trimmed);
+    if (fmt) { setEmailError(fmt); return; }
+
+    setEmailSending(true); setEmailError("");
+    try {
+      await requestEmailChange(trimmed);
+      setEmailStep("sent");
+      onToast("Verification email sent to " + trimmed + ". Check your inbox.", "success");
+    } catch (err) {
+      const msg = friendlyAuthError(err);
+      setEmailError(msg);
+      onToast(msg, "error");
+    } finally {
+      setEmailSending(false);
+    }
+  };
+
+  // ── Shared input style ─────────────────────────────────────────────────────
+  const inputStyle = (hasError) => ({
+    width: "100%", padding: "13px 14px", borderRadius: 12,
+    border: `1px solid ${hasError ? "#f87171" : T.border}`,
+    background: T.card, color: T.text,
+    fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
+    transition: "border-color 0.18s",
+  });
+
   return (
     <SubScreenShell title="Edit Profile" onBack={onBack}>
-      <div style={{ marginBottom:16 }}>
+      {/* Avatar */}
+      <div style={{ marginBottom: 16 }}>
         <div style={{ width:72, height:72, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold}50,${T.primary}50)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 18px", border:`2px solid ${T.gold}40` }}>👤</div>
         <button onClick={() => onToast("Photo upload coming soon.", "info")} style={{ display:"block", margin:"0 auto 24px", padding:"8px 18px", borderRadius:10, border:`1px solid ${T.border}`, background:T.card, color:T.primary, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}>Change Photo</button>
       </div>
-      <div style={{ marginBottom:16 }}>
+
+      {/* ── Display Name ────────────────────────────────────────────────────── */}
+      <div style={{ marginBottom: 20 }}>
         <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>Display Name</p>
         <input
-          value={editName}
-          onChange={e => setEditName(e.target.value)}
+          value={name}
+          onChange={e => setName(e.target.value)}
           autoFocus
-          style={{ width:"100%", padding:"13px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:T.card, color:T.text, fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}
+          style={inputStyle(false)}
         />
+        <button
+          onClick={handleSaveName}
+          disabled={nameSaving || !name.trim() || name.trim() === currentName}
+          style={{
+            width: "100%", padding: "13px", borderRadius: 12, border: "none",
+            fontFamily: "inherit", marginTop: 10,
+            background: (nameSaving || !name.trim() || name.trim() === currentName) ? T.dim : T.gradPrimary,
+            color: (nameSaving || !name.trim() || name.trim() === currentName) ? T.muted : "#0a0800",
+            fontSize: 14, fontWeight: 800,
+            cursor: (nameSaving || !name.trim() || name.trim() === currentName) ? "default" : "pointer",
+            transition: "all 0.18s",
+          }}
+        >
+          {nameSaving ? "Saving…" : "Save Name"}
+        </button>
       </div>
-      <div style={{ marginBottom:16 }}>
-        <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>Email Address</p>
-        <input
-          value={editEmail}
-          onChange={e => setEditEmail(e.target.value)}
-          type="email"
-          style={{ width:"100%", padding:"13px 14px", borderRadius:12, border:`1px solid ${T.border}`, background:T.card, color:T.text, fontSize:14, fontFamily:"inherit", outline:"none", boxSizing:"border-box" }}
-        />
+
+      {/* ── Divider ──────────────────────────────────────────────────────────── */}
+      <div style={{ height: 1, background: T.border, margin: "4px 0 20px" }} />
+
+      {/* ── Email Section ───────────────────────────────────────────────────── */}
+      <div style={{ marginBottom: 8 }}>
+        <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1, textTransform:"uppercase", marginBottom:4 }}>Email Address</p>
+
+        {/* Current email — read-only display */}
+        <div style={{ padding:"11px 14px", borderRadius:11, background:T.bg, border:`1px solid ${T.border}`, marginBottom:12 }}>
+          <p style={{ fontSize:10, fontWeight:700, color:T.muted, textTransform:"uppercase", letterSpacing:1, marginBottom:3 }}>Current</p>
+          <p style={{ fontSize:14, color:T.text, fontWeight:600, margin:0 }}>{currentEmail}</p>
+        </div>
+
+        {/* New email input */}
+        {emailStep !== "sent" ? (
+          <>
+            <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>New Email</p>
+            <input
+              value={newEmail}
+              onChange={e => handleEmailChange(e.target.value)}
+              onBlur={() => setEmailError(validateEmailFormat(newEmail))}
+              type="email"
+              placeholder="Enter new email address"
+              style={inputStyle(!!emailError)}
+            />
+            {emailError && (
+              <p style={{ fontSize:12, color:"#f87171", marginTop:6, lineHeight:1.4 }}>⚠ {emailError}</p>
+            )}
+
+            {/* Security note */}
+            <div style={{ display:"flex", gap:8, alignItems:"flex-start", marginTop:10, padding:"10px 12px", background:`${T.primary}0d`, border:`1px solid ${T.primary}25`, borderRadius:10 }}>
+              <span style={{ fontSize:13, flexShrink:0, marginTop:1 }}>🔒</span>
+              <p style={{ fontSize:11, color:T.muted, margin:0, lineHeight:1.55 }}>
+                A verification link will be sent to your <strong style={{ color:T.text }}>new address</strong>. Your email only changes after you click that link. Your current email stays active until then.
+              </p>
+            </div>
+
+            <button
+              onClick={handleRequestEmailChange}
+              disabled={emailSending || !!emailError || !emailChanged}
+              style={{
+                width: "100%", padding: "13px", borderRadius: 12,
+                fontFamily: "inherit", marginTop: 12,
+                background: (emailSending || !!emailError || !emailChanged) ? T.dim : `${T.primary}22`,
+                color: (emailSending || !!emailError || !emailChanged) ? T.muted : T.primary,
+                border: `1px solid ${(emailSending || !!emailError || !emailChanged) ? T.border : T.primary + "50"}`,
+                fontSize: 14, fontWeight: 800,
+                cursor: (emailSending || !!emailError || !emailChanged) ? "default" : "pointer",
+                transition: "all 0.18s",
+              }}
+            >
+              {emailSending ? "Sending…" : "Send Verification Email →"}
+            </button>
+          </>
+        ) : (
+          /* Sent state — show confirmation, let them re-trigger or cancel */
+          <div style={{ padding:"16px", background:"#14532d22", border:"1px solid #22c55e40", borderRadius:12 }}>
+            <p style={{ fontSize:13, fontWeight:800, color:"#34d399", marginBottom:6 }}>✓ Verification email sent</p>
+            <p style={{ fontSize:12, color:T.muted, lineHeight:1.6, marginBottom:12 }}>
+              We sent a link to <strong style={{ color:T.text }}>{newEmail.trim()}</strong>. Click it to confirm your new address. Until then, your email stays as <strong style={{ color:T.text }}>{currentEmail}</strong>.
+            </p>
+            <button
+              onClick={() => { setEmailStep("idle"); setNewEmail(""); setEmailError(""); }}
+              style={{ background:"transparent", border:`1px solid ${T.border}`, borderRadius:9, padding:"8px 14px", color:T.muted, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}
+            >
+              Change a different email
+            </button>
+          </div>
+        )}
       </div>
-      <button onClick={onSave} style={{ width:"100%", padding:"14px", borderRadius:13, border:"none", fontFamily:"inherit", background:T.gradPrimary, color:"#0a0800", fontSize:14, fontWeight:800, cursor:"pointer", marginTop:8 }}>
-        Save Changes
-      </button>
     </SubScreenShell>
   );
 }
@@ -2647,10 +2805,15 @@ function AccountPage({ isPremium, billingCycle, subScreen, setSubScreen, userPro
 
   if (subScreen === "settings-profile") return (
     <ProfileEditScreen
-      editName={editName} setEditName={setEditName}
-      editEmail={editEmail} setEditEmail={setEditEmail}
-      onSave={() => { setUserProfile({ name:editName, email:editEmail }); onToast("Profile updated.", "success"); goBack(); }}
-      onBack={goBack} onToast={onToast}
+      currentName={editName}
+      currentEmail={userProfile.email}
+      onNameSaved={(newName) => {
+        setEditName(newName);
+        setUserProfile(p => ({ ...p, name: newName }));
+      }}
+      onEmailVerificationSent={() => {}}
+      onBack={goBack}
+      onToast={onToast}
     />
   );
   if (subScreen === "settings-notifications") return <NotificationsScreen notifSettings={notifSettings} setNotifSettings={setNotifSettings} onSave={() => { onToast("Notification preferences saved.", "success"); goBack(); }} onBack={goBack} />;
