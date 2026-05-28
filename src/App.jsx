@@ -2346,7 +2346,35 @@ function SubScreenShell({ title, children, onBack }) {
   );
 }
 
-// ── Profile Edit Screen (top-level — FIXES keyboard dismiss bug) ───────────────
+// ── AuthStateDebug — DEBUG only, shows live Firebase auth state ───────────────
+// Used inside the debug panel in ProfileEditScreen.
+// Remove this component when removing the debug panel.
+function AuthStateDebug() {
+  const user = auth.currentUser;
+  if (!user) {
+    return (
+      <p style={{ fontSize:11, color:"#f87171", fontFamily:"monospace", margin:0 }}>
+        ✗ auth.currentUser is null
+      </p>
+    );
+  }
+  return (
+    <div style={{ fontSize:11, fontFamily:"monospace", color:T.muted, lineHeight:1.7 }}>
+      <p style={{ margin:0 }}><strong style={{ color:T.text }}>uid:</strong> {user.uid}</p>
+      <p style={{ margin:0 }}><strong style={{ color:T.text }}>email:</strong> {user.email}</p>
+      <p style={{ margin:0 }}><strong style={{ color:T.text }}>emailVerified:</strong>{" "}
+        <span style={{ color: user.emailVerified ? "#34d399" : "#f87171" }}>
+          {String(user.emailVerified)}
+        </span>
+      </p>
+      <p style={{ margin:0 }}><strong style={{ color:T.text }}>providerData[0].providerId:</strong>{" "}
+        {user.providerData?.[0]?.providerId ?? "(none)"}
+      </p>
+    </div>
+  );
+}
+
+// ── Profile Edit Screen ────────────────────────────────────────────────────────
 // Name:  saved immediately via Firebase updateProfile — no security boundary.
 // Email: never saved locally. Sends a verification link to the NEW address via
 //        verifyBeforeUpdateEmail. Firebase applies the change only after the
@@ -2386,6 +2414,9 @@ function ProfileEditScreen({ currentName, currentEmail, onNameSaved, onEmailVeri
   // Remember the target email across the reauth step
   const pendingEmailRef = useState("")[1]; // write-only ref pattern
   const [pendingEmail, setPendingEmail]   = useState("");
+
+  // DEBUG — raw Firebase error captured for in-UI display; null when no error
+  const [debugError, setDebugError] = useState(null);
 
   // ── Validation ────────────────────────────────────────────────────────────
   const validateEmail = (value) => {
@@ -2450,14 +2481,38 @@ function ProfileEditScreen({ currentName, currentEmail, onNameSaved, onEmailVeri
 
   // Core email-change call — called both on first attempt and after reauth
   const attemptEmailChange = async (targetEmail) => {
-    setEmailSending(true); setEmailError("");
+    setEmailSending(true); setEmailError(""); setDebugError(null);
+
+    // ── DEBUG: log entry point ─────────────────────────────────────────────
+    console.group("[Auro] attemptEmailChange — entry");
+    console.log("targetEmail:", targetEmail);
+    console.log("auth.currentUser at call time:", auth.currentUser);
+    console.groupEnd();
+
     try {
+      console.log("[Auro] awaiting requestEmailChange…");
       await requestEmailChange(targetEmail);      // verifyBeforeUpdateEmail()
+      console.log("[Auro] requestEmailChange resolved — success");
       setPendingEmail(targetEmail);
       setEmailStep("sent");
+      setDebugError(null);
       if (onEmailVerificationSent) onEmailVerificationSent(targetEmail);
       onToast("Verification email sent. Check your inbox.", "success");
     } catch (err) {
+      // ── DEBUG: capture full error for UI display ───────────────────────
+      console.group("[Auro] attemptEmailChange — CAUGHT error");
+      console.error("err:", err);
+      console.error("err.code:", err?.code);
+      console.error("err.message:", err?.message);
+      console.groupEnd();
+
+      // Store the raw error for the debug panel in the UI
+      setDebugError({
+        code:    err?.code    ?? "(no code)",
+        message: err?.message ?? "(no message)",
+        name:    err?.name    ?? "(no name)",
+      });
+
       if (err?.code === "auth/requires-recent-login") {
         // Session too old — slide into reauth step
         setPendingEmail(targetEmail);
@@ -2638,6 +2693,50 @@ function ProfileEditScreen({ currentName, currentEmail, onNameSaved, onEmailVeri
             </button>
           </div>
         )}
+
+        {/* ── DEBUG PANEL — shows raw Firebase error; remove before shipping ── */}
+        <div style={{ marginTop:20, padding:"14px", borderRadius:12, border:"2px solid #f5c84260", background:"#f5c84208" }}>
+          <p style={{ fontSize:10, fontWeight:800, color:T.gold, letterSpacing:1.5, textTransform:"uppercase", marginBottom:10 }}>
+            ⚙ Debug — Firebase Email Change
+          </p>
+
+          {/* Live auth state */}
+          <div style={{ marginBottom:10 }}>
+            <p style={{ fontSize:10, fontWeight:700, color:T.muted, marginBottom:4, textTransform:"uppercase", letterSpacing:1 }}>auth.currentUser</p>
+            <AuthStateDebug />
+          </div>
+
+          {/* Last error */}
+          {debugError ? (
+            <div style={{ background:"#450a0a", border:"1px solid #f8717160", borderRadius:9, padding:"10px 12px" }}>
+              <p style={{ fontSize:10, fontWeight:800, color:"#f87171", letterSpacing:1, textTransform:"uppercase", marginBottom:6 }}>Last Firebase Error</p>
+              <p style={{ fontSize:12, color:"#fca5a5", fontFamily:"monospace", marginBottom:3 }}>
+                <strong>code:</strong> {debugError.code}
+              </p>
+              <p style={{ fontSize:11, color:"#fca5a5", fontFamily:"monospace", marginBottom:3, wordBreak:"break-all" }}>
+                <strong>message:</strong> {debugError.message}
+              </p>
+              <p style={{ fontSize:11, color:"#fca5a5", fontFamily:"monospace" }}>
+                <strong>name:</strong> {debugError.name}
+              </p>
+            </div>
+          ) : (
+            <div style={{ background:"#14532d22", border:"1px solid #22c55e40", borderRadius:9, padding:"8px 12px" }}>
+              <p style={{ fontSize:11, color:"#34d399", fontFamily:"monospace", margin:0 }}>
+                {emailStep === "sent" ? "✓ No error — verifyBeforeUpdateEmail() resolved" : "No error yet"}
+              </p>
+            </div>
+          )}
+
+          <button
+            onClick={() => setDebugError(null)}
+            style={{ marginTop:10, background:"transparent", border:`1px solid ${T.border}`, borderRadius:7, padding:"5px 10px", color:T.dim, fontFamily:"inherit", fontSize:10, fontWeight:700, cursor:"pointer" }}
+          >
+            Clear debug error
+          </button>
+        </div>
+        {/* ── END DEBUG PANEL ─────────────────────────────────────────────── */}
+
       </div>
     </SubScreenShell>
   );
