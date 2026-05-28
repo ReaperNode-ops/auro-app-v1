@@ -8,6 +8,8 @@ import {
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   sendEmailVerification,
+  verifyBeforeUpdateEmail,
+  updateProfile,
   signOut,
   deleteUser,
   onAuthStateChanged,
@@ -73,6 +75,32 @@ export async function resendVerificationEmail() {
 }
  
 /**
+ * Update the current user's display name in Firebase Auth.
+ * Safe to call immediately — no verification needed for display names.
+ */
+export async function updateDisplayName(newName) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("No user signed in.");
+  await updateProfile(user, { displayName: newName.trim() });
+  await reload(auth.currentUser); // ensure the token reflects the change
+}
+ 
+/**
+ * Send a verification email to newEmail.
+ * Firebase only applies the address change after the user clicks the link.
+ * The current email stays active until then — this is intentional and secure.
+ *
+ * Throws auth/requires-recent-login if the session is too old.
+ * Throws auth/email-already-in-use if the address belongs to another account.
+ * Throws auth/invalid-email if the format is bad.
+ */
+export async function requestEmailChange(newEmail) {
+  const user = auth.currentUser;
+  if (!user) throw new Error("No user signed in.");
+  await verifyBeforeUpdateEmail(user, newEmail.trim());
+}
+ 
+/**
  * Sign out the current user.
  */
 export async function firebaseSignOut() {
@@ -114,8 +142,10 @@ export function friendlyAuthError(error) {
     "auth/invalid-credential":      "Incorrect email or password.",
     "auth/too-many-requests":       "Too many attempts. Please wait a moment and try again.",
     "auth/network-request-failed":  "Network error. Check your connection.",
-    "auth/requires-recent-login":   "Please sign out and sign back in before doing this.",
+    "auth/requires-recent-login":   "For security, please sign out and sign back in before changing your email.",
     "auth/user-disabled":           "This account has been disabled.",
+    "auth/operation-not-allowed":   "Email/password accounts are not enabled.",
+    "auth/missing-new-email":       "Please enter a new email address.",
   };
   return map[code] || "Something went wrong. Please try again.";
 }
