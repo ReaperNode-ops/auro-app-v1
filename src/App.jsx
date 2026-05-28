@@ -8,6 +8,7 @@ import {
   resendVerificationEmail,
   updateDisplayName,
   requestEmailChange,
+  reauthenticate,
   firebaseSignOut,
   firebaseDeleteAccount,
   friendlyAuthError,
@@ -2350,43 +2351,95 @@ function SubScreenShell({ title, children, onBack }) {
 // Email: never saved locally. Sends a verification link to the NEW address via
 //        verifyBeforeUpdateEmail. Firebase applies the change only after the
 //        user clicks that link. The old email stays active until then.
+// ── Profile Edit Screen ────────────────────────────────────────────────────────
+//
+// NAME:  saved immediately via Firebase updateProfile. No security boundary.
+//
+// EMAIL: three-stage flow
+//   "idle"    → user types new email, instant format validation
+//   "reauth"  → Firebase returned auth/requires-recent-login; user enters password
+//   "sent"    → verifyBeforeUpdateEmail() succeeded; confirmation shown
+//
+// verifyBeforeUpdateEmail() sends a link to the NEW address.
+// Firebase applies the change only after the user clicks that link.
+// auth.currentUser.email is never changed by this screen — onAuthChange in App
+// will pick up the update automatically when Firebase processes the link click.
+//
 function ProfileEditScreen({ currentName, currentEmail, onNameSaved, onEmailVerificationSent, onBack, onToast }) {
-  // ── Name state ─────────────────────────────────────────────────────────────
-  const [name, setName]           = useState(currentName);
+
+  // ── Name ──────────────────────────────────────────────────────────────────
+  const [name, setName]             = useState(currentName);
   const [nameSaving, setNameSaving] = useState(false);
 
-  // ── Email state ────────────────────────────────────────────────────────────
+  // ── Email ──────────────────────────────────────────────────────────────────
   const [newEmail, setNewEmail]         = useState("");
   const [emailError, setEmailError]     = useState("");
   const [emailSending, setEmailSending] = useState(false);
-  // "idle" | "sent" — tracks whether the verification email was dispatched
-  const [emailStep, setEmailStep]       = useState("idle");
 
-  const emailChanged = newEmail.trim() !== "" && newEmail.trim() !== currentEmail;
+  // "idle" | "reauth" | "sent"
+  const [emailStep, setEmailStep] = useState("idle");
 
-  // Basic format check — runs on every keystroke so feedback is instant
-  const validateEmailFormat = (value) => {
-    if (!value.trim()) return "";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value.trim())) return "Please enter a valid email address.";
-    if (value.trim() === currentEmail) return "This is already your current email.";
+  // Reauth sub-state (only used when emailStep === "reauth")
+  const [password, setPassword]         = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [reauthLoading, setReauthLoading] = useState(false);
+  // Remember the target email across the reauth step
+  const pendingEmailRef = useState("")[1]; // write-only ref pattern
+  const [pendingEmail, setPendingEmail]   = useState("");
+
+  // ── Validation ────────────────────────────────────────────────────────────
+  const validateEmail = (value) => {
+    const v = value.trim();
+    if (!v) return "";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return "Please enter a valid email address.";
+    if (v.toLowerCase() === currentEmail.toLowerCase()) return "This is already your current email.";
     return "";
   };
 
-  const handleEmailChange = (value) => {
+  const handleNewEmailInput = (value) => {
     setNewEmail(value);
-    setEmailError(validateEmailFormat(value));
-    if (emailStep === "sent") setEmailStep("idle"); // reset if they edit again
+    setEmailError(validateEmail(value));
+    if (emailStep === "sent") setEmailStep("idle");
   };
 
-  // ── Save name ──────────────────────────────────────────────────────────────
+  const emailReady = newEmail.trim() !== "" && !emailError && newEmail.trim().toLowerCase() !== currentEmail.toLowerCase();
+
+  // ── Shared styles ─────────────────────────────────────────────────────────
+  const inputSty = (hasError) => ({
+    width: "100%", padding: "13px 14px", borderRadius: 12, outline: "none",
+    border: `1px solid ${hasError ? "#f87171" : T.border}`,
+    background: T.card, color: T.text, fontSize: 14,
+    fontFamily: "inherit", boxSizing: "border-box", transition: "border-color 0.18s",
+  });
+
+  const primaryBtn = (disabled) => ({
+    width: "100%", padding: "14px", borderRadius: 13, border: "none",
+    fontFamily: "inherit", fontSize: 14, fontWeight: 800, transition: "all 0.18s",
+    background: disabled ? T.dim : T.gradPrimary,
+    color: disabled ? T.muted : "#0a0800",
+    cursor: disabled ? "default" : "pointer",
+    boxShadow: disabled ? "none" : `0 0 18px ${T.gold}30`,
+  });
+
+  const ghostBtn = (active = true) => ({
+    width: "100%", padding: "13px", borderRadius: 12,
+    border: `1px solid ${active ? T.primary + "50" : T.border}`,
+    fontFamily: "inherit", fontSize: 14, fontWeight: 800, transition: "all 0.18s",
+    background: active ? `${T.primary}18` : "transparent",
+    color: active ? T.primary : T.muted,
+    cursor: active ? "pointer" : "default",
+  });
+
+  // ── Handlers ──────────────────────────────────────────────────────────────
+
   const handleSaveName = async () => {
     const trimmed = name.trim();
-    if (!trimmed) { onToast("Name cannot be empty.", "error"); return; }
-    if (trimmed === currentName) { onToast("No changes to save.", "info"); return; }
+    if (!trimmed)                   { onToast("Name cannot be empty.", "error"); return; }
+    if (trimmed === currentName)    { onToast("No changes to save.", "info");   return; }
     setNameSaving(true);
     try {
       await updateDisplayName(trimmed);
-      onNameSaved(trimmed);          // lets App update userProfile.name
+      onNameSaved(trimmed);
       onToast("Name updated.", "success");
     } catch (err) {
       onToast(friendlyAuthError(err), "error");
@@ -2395,137 +2448,193 @@ function ProfileEditScreen({ currentName, currentEmail, onNameSaved, onEmailVeri
     }
   };
 
-  // ── Request email change ───────────────────────────────────────────────────
-  // Does NOT apply the change. Sends a verification link to the new address.
-  // Firebase applies the change only after the user clicks that link.
-  const handleRequestEmailChange = async () => {
-    const trimmed = newEmail.trim();
-    const fmt = validateEmailFormat(trimmed);
-    if (fmt) { setEmailError(fmt); return; }
-
+  // Core email-change call — called both on first attempt and after reauth
+  const attemptEmailChange = async (targetEmail) => {
     setEmailSending(true); setEmailError("");
     try {
-      await requestEmailChange(trimmed);
+      await requestEmailChange(targetEmail);      // verifyBeforeUpdateEmail()
+      setPendingEmail(targetEmail);
       setEmailStep("sent");
-      onToast("Verification email sent to " + trimmed + ". Check your inbox.", "success");
+      if (onEmailVerificationSent) onEmailVerificationSent(targetEmail);
+      onToast("Verification email sent. Check your inbox.", "success");
     } catch (err) {
-      const msg = friendlyAuthError(err);
-      setEmailError(msg);
-      onToast(msg, "error");
+      if (err?.code === "auth/requires-recent-login") {
+        // Session too old — slide into reauth step
+        setPendingEmail(targetEmail);
+        setEmailStep("reauth");
+        setPassword("");
+        setPasswordError("");
+      } else {
+        const msg = friendlyAuthError(err);
+        setEmailError(msg);
+        onToast(msg, "error");
+      }
     } finally {
       setEmailSending(false);
     }
   };
 
-  // ── Shared input style ─────────────────────────────────────────────────────
-  const inputStyle = (hasError) => ({
-    width: "100%", padding: "13px 14px", borderRadius: 12,
-    border: `1px solid ${hasError ? "#f87171" : T.border}`,
-    background: T.card, color: T.text,
-    fontSize: 14, fontFamily: "inherit", outline: "none", boxSizing: "border-box",
-    transition: "border-color 0.18s",
-  });
+  const handleSendVerification = async () => {
+    const trimmed = newEmail.trim();
+    const err = validateEmail(trimmed);
+    if (err) { setEmailError(err); return; }
+    await attemptEmailChange(trimmed);
+  };
 
+  // Called from the reauth modal — re-signs in, then retries the email change
+  const handleReauth = async () => {
+    if (!password) { setPasswordError("Please enter your password."); return; }
+    setReauthLoading(true); setPasswordError("");
+    try {
+      await reauthenticate(password);           // reauthenticateWithCredential()
+      // Reauth succeeded — immediately retry the email change
+      setEmailStep("idle");                     // clear reauth UI first
+      await attemptEmailChange(pendingEmail);   // will set "sent" on success
+    } catch (err) {
+      setPasswordError(friendlyAuthError(err));
+    } finally {
+      setReauthLoading(false);
+    }
+  };
+
+  const resetEmailFlow = () => {
+    setEmailStep("idle");
+    setNewEmail("");
+    setEmailError("");
+    setPassword("");
+    setPasswordError("");
+    setPendingEmail("");
+  };
+
+  // ── Render ────────────────────────────────────────────────────────────────
   return (
     <SubScreenShell title="Edit Profile" onBack={onBack}>
+
       {/* Avatar */}
       <div style={{ marginBottom: 16 }}>
         <div style={{ width:72, height:72, borderRadius:"50%", background:`linear-gradient(135deg,${T.gold}50,${T.primary}50)`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, margin:"0 auto 18px", border:`2px solid ${T.gold}40` }}>👤</div>
         <button onClick={() => onToast("Photo upload coming soon.", "info")} style={{ display:"block", margin:"0 auto 24px", padding:"8px 18px", borderRadius:10, border:`1px solid ${T.border}`, background:T.card, color:T.primary, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}>Change Photo</button>
       </div>
 
-      {/* ── Display Name ────────────────────────────────────────────────────── */}
+      {/* ── Display Name ─────────────────────────────────────────────────── */}
       <div style={{ marginBottom: 20 }}>
-        <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>Display Name</p>
-        <input
-          value={name}
-          onChange={e => setName(e.target.value)}
-          autoFocus
-          style={inputStyle(false)}
-        />
+        <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1.2, textTransform:"uppercase", marginBottom:8 }}>Display Name</p>
+        <input value={name} onChange={e => setName(e.target.value)} autoFocus style={inputSty(false)} />
         <button
           onClick={handleSaveName}
           disabled={nameSaving || !name.trim() || name.trim() === currentName}
-          style={{
-            width: "100%", padding: "13px", borderRadius: 12, border: "none",
-            fontFamily: "inherit", marginTop: 10,
-            background: (nameSaving || !name.trim() || name.trim() === currentName) ? T.dim : T.gradPrimary,
-            color: (nameSaving || !name.trim() || name.trim() === currentName) ? T.muted : "#0a0800",
-            fontSize: 14, fontWeight: 800,
-            cursor: (nameSaving || !name.trim() || name.trim() === currentName) ? "default" : "pointer",
-            transition: "all 0.18s",
-          }}
+          style={{ ...primaryBtn(nameSaving || !name.trim() || name.trim() === currentName), marginTop: 10 }}
         >
           {nameSaving ? "Saving…" : "Save Name"}
         </button>
       </div>
 
-      {/* ── Divider ──────────────────────────────────────────────────────────── */}
-      <div style={{ height: 1, background: T.border, margin: "4px 0 20px" }} />
+      {/* ── Divider ──────────────────────────────────────────────────────── */}
+      <div style={{ height: 1, background: T.border, margin: "4px 0 22px" }} />
 
-      {/* ── Email Section ───────────────────────────────────────────────────── */}
-      <div style={{ marginBottom: 8 }}>
-        <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1, textTransform:"uppercase", marginBottom:4 }}>Email Address</p>
+      {/* ── Email Section ────────────────────────────────────────────────── */}
+      <div>
+        <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1.2, textTransform:"uppercase", marginBottom:10 }}>Email Address</p>
 
-        {/* Current email — read-only display */}
-        <div style={{ padding:"11px 14px", borderRadius:11, background:T.bg, border:`1px solid ${T.border}`, marginBottom:12 }}>
+        {/* Current email — always visible, read-only */}
+        <div style={{ padding:"11px 14px", borderRadius:11, background:T.bg, border:`1px solid ${T.border}`, marginBottom:16 }}>
           <p style={{ fontSize:10, fontWeight:700, color:T.muted, textTransform:"uppercase", letterSpacing:1, marginBottom:3 }}>Current</p>
           <p style={{ fontSize:14, color:T.text, fontWeight:600, margin:0 }}>{currentEmail}</p>
         </div>
 
-        {/* New email input */}
-        {emailStep !== "sent" ? (
+        {/* ── STEP: idle — new email input ─────────────────────────────── */}
+        {emailStep === "idle" && (
           <>
-            <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1, textTransform:"uppercase", marginBottom:8 }}>New Email</p>
+            <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1.2, textTransform:"uppercase", marginBottom:8 }}>New Email</p>
             <input
               value={newEmail}
-              onChange={e => handleEmailChange(e.target.value)}
-              onBlur={() => setEmailError(validateEmailFormat(newEmail))}
+              onChange={e => handleNewEmailInput(e.target.value)}
+              onBlur={() => { if (newEmail) setEmailError(validateEmail(newEmail)); }}
               type="email"
               placeholder="Enter new email address"
-              style={inputStyle(!!emailError)}
+              style={inputSty(!!emailError)}
             />
             {emailError && (
               <p style={{ fontSize:12, color:"#f87171", marginTop:6, lineHeight:1.4 }}>⚠ {emailError}</p>
             )}
 
-            {/* Security note */}
-            <div style={{ display:"flex", gap:8, alignItems:"flex-start", marginTop:10, padding:"10px 12px", background:`${T.primary}0d`, border:`1px solid ${T.primary}25`, borderRadius:10 }}>
-              <span style={{ fontSize:13, flexShrink:0, marginTop:1 }}>🔒</span>
-              <p style={{ fontSize:11, color:T.muted, margin:0, lineHeight:1.55 }}>
-                A verification link will be sent to your <strong style={{ color:T.text }}>new address</strong>. Your email only changes after you click that link. Your current email stays active until then.
+            <div style={{ display:"flex", gap:8, alignItems:"flex-start", marginTop:12, padding:"10px 12px", background:`${T.primary}0d`, border:`1px solid ${T.primary}25`, borderRadius:10 }}>
+              <span style={{ fontSize:14, flexShrink:0 }}>🔒</span>
+              <p style={{ fontSize:11, color:T.muted, margin:0, lineHeight:1.6 }}>
+                A verification link is sent to your <strong style={{ color:T.text }}>new address</strong>. Your email only updates after you click that link — your current address stays active until then.
               </p>
             </div>
 
             <button
-              onClick={handleRequestEmailChange}
-              disabled={emailSending || !!emailError || !emailChanged}
-              style={{
-                width: "100%", padding: "13px", borderRadius: 12,
-                fontFamily: "inherit", marginTop: 12,
-                background: (emailSending || !!emailError || !emailChanged) ? T.dim : `${T.primary}22`,
-                color: (emailSending || !!emailError || !emailChanged) ? T.muted : T.primary,
-                border: `1px solid ${(emailSending || !!emailError || !emailChanged) ? T.border : T.primary + "50"}`,
-                fontSize: 14, fontWeight: 800,
-                cursor: (emailSending || !!emailError || !emailChanged) ? "default" : "pointer",
-                transition: "all 0.18s",
-              }}
+              onClick={handleSendVerification}
+              disabled={emailSending || !emailReady}
+              style={{ ...ghostBtn(emailReady && !emailSending), marginTop: 14 }}
             >
               {emailSending ? "Sending…" : "Send Verification Email →"}
             </button>
           </>
-        ) : (
-          /* Sent state — show confirmation, let them re-trigger or cancel */
-          <div style={{ padding:"16px", background:"#14532d22", border:"1px solid #22c55e40", borderRadius:12 }}>
-            <p style={{ fontSize:13, fontWeight:800, color:"#34d399", marginBottom:6 }}>✓ Verification email sent</p>
-            <p style={{ fontSize:12, color:T.muted, lineHeight:1.6, marginBottom:12 }}>
-              We sent a link to <strong style={{ color:T.text }}>{newEmail.trim()}</strong>. Click it to confirm your new address. Until then, your email stays as <strong style={{ color:T.text }}>{currentEmail}</strong>.
+        )}
+
+        {/* ── STEP: reauth — Firebase requires recent login ────────────── */}
+        {emailStep === "reauth" && (
+          <div style={{ animation:"fadeIn 0.25s ease" }}>
+            <div style={{ padding:"14px", background:`${T.gold}10`, border:`1px solid ${T.gold}35`, borderRadius:12, marginBottom:16 }}>
+              <p style={{ fontSize:13, fontWeight:800, color:T.gold, marginBottom:5 }}>🔒 Confirm your password</p>
+              <p style={{ fontSize:12, color:T.muted, lineHeight:1.55, margin:0 }}>
+                For security, Firebase requires you to confirm your password before changing your email to{" "}
+                <strong style={{ color:T.text }}>{pendingEmail}</strong>.
+              </p>
+            </div>
+
+            <p style={{ fontSize:11, fontWeight:700, color:T.muted, letterSpacing:1.2, textTransform:"uppercase", marginBottom:8 }}>Current Password</p>
+            <input
+              type="password"
+              value={password}
+              onChange={e => { setPassword(e.target.value); setPasswordError(""); }}
+              onKeyDown={e => e.key === "Enter" && handleReauth()}
+              placeholder="Enter your password"
+              autoFocus
+              style={inputSty(!!passwordError)}
+            />
+            {passwordError && (
+              <p style={{ fontSize:12, color:"#f87171", marginTop:6, lineHeight:1.4 }}>⚠ {passwordError}</p>
+            )}
+
+            <button
+              onClick={handleReauth}
+              disabled={reauthLoading || !password}
+              style={{ ...primaryBtn(reauthLoading || !password), marginTop: 14 }}
+            >
+              {reauthLoading ? "Verifying…" : "Confirm & Send Verification Email →"}
+            </button>
+
+            <button
+              onClick={resetEmailFlow}
+              style={{ ...ghostBtn(false), marginTop: 10 }}
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
+        {/* ── STEP: sent — confirmation ─────────────────────────────────── */}
+        {emailStep === "sent" && (
+          <div style={{ padding:"18px", background:"#14532d22", border:"1px solid #22c55e40", borderRadius:12, animation:"fadeIn 0.3s ease" }}>
+            <p style={{ fontSize:14, fontWeight:800, color:"#34d399", marginBottom:8 }}>✓ Verification email sent</p>
+            <p style={{ fontSize:12, color:T.muted, lineHeight:1.65, marginBottom:14 }}>
+              We sent a confirmation link to{" "}
+              <strong style={{ color:T.text }}>{pendingEmail}</strong>. Click it to apply your new address.
+              Until then, your email stays as{" "}
+              <strong style={{ color:T.text }}>{currentEmail}</strong>.
+            </p>
+            <p style={{ fontSize:11, color:T.muted, lineHeight:1.5, marginBottom:14 }}>
+              Didn't receive it? Check your spam folder, or use the button below to try a different address.
             </p>
             <button
-              onClick={() => { setEmailStep("idle"); setNewEmail(""); setEmailError(""); }}
+              onClick={resetEmailFlow}
               style={{ background:"transparent", border:`1px solid ${T.border}`, borderRadius:9, padding:"8px 14px", color:T.muted, fontFamily:"inherit", fontSize:12, fontWeight:700, cursor:"pointer" }}
             >
-              Change a different email
+              Use a different email
             </button>
           </div>
         )}
