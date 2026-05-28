@@ -111,14 +111,42 @@ export async function reauthenticate(password) {
  * The caller must prompt for password, call reauthenticate(), then retry.
  *
  * Throws auth/email-already-in-use, auth/invalid-email on bad input.
+ *
+ * [DEBUG] Full error object is logged to the console for diagnosis.
  */
 export async function requestEmailChange(newEmail) {
   const user = auth.currentUser;
+ 
+  // ── DEBUG: log state before the call ──────────────────────────────────────
+  console.group("[Auro] requestEmailChange — DEBUG");
+  console.log("auth.currentUser:", user);
+  console.log("user.email:", user?.email);
+  console.log("user.emailVerified:", user?.emailVerified);
+  console.log("user.uid:", user?.uid);
+  console.log("newEmail (trimmed):", newEmail.trim());
+  console.log("verifyBeforeUpdateEmail fn:", typeof verifyBeforeUpdateEmail);
+  console.groupEnd();
+ 
   if (!user) throw new Error("No user signed in.");
-  // verifyBeforeUpdateEmail is the only correct Firebase v9 API for this.
-  // It sends a link to newEmail; Firebase applies the change only after click.
-  // It does NOT call updateEmail() — the current email stays active.
-  await verifyBeforeUpdateEmail(user, newEmail.trim());
+ 
+  try {
+    // verifyBeforeUpdateEmail is the only correct Firebase v9 API for this.
+    // It sends a link to newEmail; Firebase applies the change only after click.
+    // It does NOT call updateEmail() — the current email stays active.
+    console.log("[Auro] Calling verifyBeforeUpdateEmail now…");
+    await verifyBeforeUpdateEmail(user, newEmail.trim());
+    console.log("[Auro] verifyBeforeUpdateEmail resolved — email sent successfully.");
+  } catch (err) {
+    // ── DEBUG: log the full raw Firebase error ─────────────────────────────
+    console.group("[Auro] verifyBeforeUpdateEmail THREW");
+    console.error("Full error object:", err);
+    console.error("error.code:", err?.code);
+    console.error("error.message:", err?.message);
+    console.error("error.name:", err?.name);
+    console.error("error.customData:", err?.customData);
+    console.groupEnd();
+    throw err; // re-throw so the caller handles it
+  }
 }
  
 /**
