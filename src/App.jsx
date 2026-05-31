@@ -2178,6 +2178,9 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats, answers, fir
         isPremium,
         answers:  answers ?? {},
       };
+
+console.log("Sending Gemini request:", trimmed);
+      
       const responseText = await geminiChat(trimmed, buildHistory(messages), userContext);
       setMessages(prev => [...prev, {
         id:   Date.now() + 1,
