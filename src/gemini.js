@@ -71,7 +71,11 @@ export async function geminiChat(userMessage, history = [], userContext = {}) {
  
   // Build conversation turns for the API
   // Gemini wants roles "user" and "model" (not "assistant")
-  const contents = [
+ const contents = [
+  {
+    role: "user",
+    parts: [{ text: buildSystemPrompt(userContext) }],
+  },
     // Inject system context as the first user turn (Gemini 2.0 Flash supports
     // a system_instruction field but this approach works universally)
     ...history.map(turn => ({
@@ -85,9 +89,6 @@ export async function geminiChat(userMessage, history = [], userContext = {}) {
   ];
  
   const body = {
-    system_instruction: {
-      parts: [{ text: buildSystemPrompt(userContext) }],
-    },
     contents,
     generationConfig: {
       temperature:      0.85,
