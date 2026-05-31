@@ -7,7 +7,7 @@
 //
 // Get a key at: https://aistudio.google.com/app/apikey
  
-cconst MODEL = "gemini-1.5-flash";
+const MODEL = "gemini-1.5-flash";
 
 const API_URL =
   `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent`;
