@@ -7,8 +7,10 @@
 //
 // Get a key at: https://aistudio.google.com/app/apikey
  
-const MODEL = "gemini-1.5-flash-latest";
-const API_URL = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+cconst MODEL = "gemini-1.5-flash";
+
+const API_URL =
+  `https://generativelanguage.googleapis.com/v1/models/${MODEL}:generateContent`;
  
 // ── System prompt builder ──────────────────────────────────────────────────────
 // Injects user context so Gemini can give personalised advice.
