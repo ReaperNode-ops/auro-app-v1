@@ -61,4 +61,32 @@ export async function geminiChat(userMessage, history = [], userContext = {}) {
   }
 
   return text.trim();
+
+  const STORAGE_KEY_PREFIX = "auro_chat_usage_";
+
+function todayKey(uid) {
+  const d = new Date();
+  const dateStr = `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+  return `${STORAGE_KEY_PREFIX}${uid ?? "anon"}_${dateStr}`;
+}
+
+export function getDailyUsage(uid) {
+  try {
+    const raw = localStorage.getItem(todayKey(uid));
+    return raw ? parseInt(raw, 10) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+export function incrementDailyUsage(uid) {
+  try {
+    const key = todayKey(uid);
+    const current = getDailyUsage(uid);
+    localStorage.setItem(key, String(current + 1));
+    return current + 1;
+  } catch {
+    return 0;
+  }
+}
 }
