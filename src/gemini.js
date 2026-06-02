@@ -55,13 +55,7 @@ INSTRUCTIONS:
  * @returns {Promise<string>}      - Gemini's response text
  */
 export async function geminiChat(userMessage, history = [], userContext = {}) {
-  const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
-  if (!apiKey) {
-    throw new GeminiError(
-      "VITE_GEMINI_API_KEY is not set. Add it to your .env file.",
-      "missing_api_key"
-    );
-  }
+ 
  
   // Build conversation turns for the API
   // Gemini wants roles "user" and "model" (not "assistant")
