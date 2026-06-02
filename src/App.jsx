@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import AuthScreen from "./AuthScreen.jsx";
-import { geminiChat, getDailyUsage, incrementDailyUsage } from "./gemini.js";
+import { auroChat } from "./auroAI.js";
+import { getDailyUsage, incrementDailyUsage } from "./usage.js";
 import {
   auth,
   reload,
