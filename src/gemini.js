@@ -143,12 +143,14 @@ export class GeminiError extends Error {
  
 // ── Error → human message ──────────────────────────────────────────────────────
 function friendlyGeminiError(status, code, rawMessage) {
+  console.log("GEMINI ERROR DEBUG:", { status, code, rawMessage });
+
   if (status === 400) return "Invalid request — please try rephrasing.";
-  if (status === 401 || status === 403) return "Invalid API key. Check VITE_GEMINI_API_KEY in your .env file.";
-  if (status === 429) return "AI is busy right now — please wait a moment and try again.";
-  if (status === 500 || status === 503) return "Google AI service is temporarily unavailable. Try again shortly.";
-  if (code === "RESOURCE_EXHAUSTED") return "API quota reached. Check your Gemini usage at aistudio.google.com.";
-  return `AI error (${status}). Please try again.`;
+  if (status === 401 || status === 403) return "Invalid API key.";
+  if (status === 429) return `Rate limited (429): ${rawMessage || "Too many requests"}`;
+  if (status === 500 || status === 503) return "Google AI service is temporarily unavailable.";
+  if (code === "RESOURCE_EXHAUSTED") return `Quota reached: ${rawMessage}`;
+  return `AI error (${status}): ${rawMessage || "unknown error"}`;
 }
  
 // ── Daily usage helpers (localStorage, keyed by date + uid) ───────────────────
