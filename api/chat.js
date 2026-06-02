@@ -1,4 +1,4 @@
-```js
+```js id="jlwm93"
 export default async function handler(req, res) {
   try {
     const response = await fetch(
@@ -16,6 +16,8 @@ export default async function handler(req, res) {
 
     res.status(response.status).json(data);
   } catch (error) {
+    console.error(error);
+
     res.status(500).json({
       error: error.message,
     });
