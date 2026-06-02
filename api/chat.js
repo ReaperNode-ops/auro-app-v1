@@ -1,4 +1,4 @@
-```js id="k3p9zx"
+js id="clean-api-chat"
 export default async function handler(req, res) {
   try {
     const response = await fetch(
@@ -17,11 +17,10 @@ export default async function handler(req, res) {
 
     return res.status(response.status).json(data);
   } catch (error) {
-    console.error("API ERROR:", error);
+    console.error(error);
 
     return res.status(500).json({
       error: error.message,
     });
   }
 }
-```
