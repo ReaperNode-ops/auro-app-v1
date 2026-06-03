@@ -2180,9 +2180,17 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats, answers, fir
         answers:  answers ?? {},
       };
 
-console.log("Sending Gemini request:", trimmed);
-      
-      const responseText = await geminiChat(trimmed, buildHistory(messages), userContext);
+console.log("Sending Auro AI request:", trimmed);
+
+const responseText = await auroChat([
+  ...buildHistory(messages),
+  {
+    role: "user",
+    content: trimmed
+  }
+]);
+
+
       setMessages(prev => [...prev, {
         id:   Date.now() + 1,
         role: "ai",
@@ -2218,7 +2226,7 @@ console.log("Sending Gemini request:", trimmed);
           </div>
           <div>
             <div style={{ fontSize:14, fontWeight:800, color:T.text }}>Auro AI Coach</div>
-            <div style={{ fontSize:11, color:"#34d399", fontWeight:600 }}>● Gemini 2.0 Flash</div>
+            <div style={{ fontSize:11, color:"#34d399", fontWeight:600 }}>● Auro AI Core</div>
           </div>
         </div>
         <div style={{ textAlign:"right" }}>
