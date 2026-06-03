@@ -2212,7 +2212,8 @@ const responseText = await auroChat([
     }
   };
 
-  const remaining   = Math.max(0, limit - msgsUsed);
+  const remaining =
+  Math.max(0, Number(limit) - Number(msgsUsed || 0));
   const hasMessages = messages.length > 0;
 
   return (
