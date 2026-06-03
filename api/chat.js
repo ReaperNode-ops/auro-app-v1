@@ -26,7 +26,22 @@ export default async function handler(req, res) {
     console.log("Prompt:", prompt);
 
     const response = await fetch(
-  "https://router.huggingface.co/hf-inference/models/google/flan-t5-large",
+  "const response = await fetch(
+  "https://router.huggingface.co/hf-inference/models/distilgpt2",
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.HF_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      inputs: prompt,
+      parameters: {
+        max_new_tokens: 80
+      }
+    })
+  }
+);",
   {
     method: "POST",
     headers: {
