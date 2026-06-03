@@ -23,10 +23,9 @@ export default async function handler(req, res) {
       )
       .join("\n") + "\nAI:";
 
-    console.log("Prompt:", prompt);
+  console.log("USING MODEL: distilgpt2");
 
-    const response = await fetch(
-  "const response = await fetch(
+const response = await fetch(
   "https://router.huggingface.co/hf-inference/models/distilgpt2",
   {
     method: "POST",
@@ -41,7 +40,7 @@ export default async function handler(req, res) {
       }
     })
   }
-);",
+);
   {
     method: "POST",
     headers: {
