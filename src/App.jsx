@@ -2128,7 +2128,8 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats, answers, fir
   const [messages,        setMessages]        = useState([]);
   const [inputText,       setInputText]       = useState("");
   const [isTyping,        setIsTyping]        = useState(false);
-  const [msgsUsed,        setMsgsUsed]        = useState(() => getDailyUsage(firebaseUid));
+  const [msgsUsed, setMsgsUsed] =
+  useState(() => Number(getDailyUsage(firebaseUid)) || 0);
   const [showLimitBanner, setShowLimitBanner] = useState(false);
   const [aiError,         setAiError]         = useState("");
   const messagesEndRef = useRef(null);
