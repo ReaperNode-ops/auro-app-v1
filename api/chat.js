@@ -26,7 +26,7 @@ export default async function handler(req, res) {
     console.log("Prompt:", prompt);
 
     const response = await fetch(
-      "https://api-inference.huggingface.co/models/microsoft/Phi-3-mini-4k-instruct",
+      "https://router.huggingface.co/hf-inference/models/microsoft/Phi-3-mini-4k-instruct",
       {
         method: "POST",
         headers: {
