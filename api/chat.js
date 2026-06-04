@@ -11,6 +11,8 @@ export default async function handler(req, res) {
       .map(m => `${m.role}: ${m.content}`)
       .join("\n");
 
+    console.log("PROMPT:", prompt);
+
     const result = await hf.textGeneration({
       model: "microsoft/Phi-3-mini-4k-instruct",
       inputs: prompt,
@@ -20,15 +22,17 @@ export default async function handler(req, res) {
       }
     });
 
+    console.log("HF RESULT:", result);
+
     return res.status(200).json({
-      response: result.generated_text
+      response: result.generated_text || "No response"
     });
 
   } catch (err) {
-    console.error(err);
+    console.error("FULL ERROR:", err);
 
     return res.status(500).json({
-      error: err.message
+      error: err.message || "Server error"
     });
   }
 }
