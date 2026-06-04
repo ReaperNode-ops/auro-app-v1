@@ -19,8 +19,8 @@ export default async function handler(req, res) {
     });
 
     return res.status(200).json({
-      response: result.generated_text
-    });
+  response: result.generated_text || "No response"
+});
 
   } catch (err) {
     console.error(err);
