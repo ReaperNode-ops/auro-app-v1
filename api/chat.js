@@ -14,7 +14,6 @@ export default async function handler(req, res) {
       });
     }
 
-    // Build prompt
     const prompt = messages
       .map(m =>
         `${m.role === "user" ? "User" : "AI"}: ${
@@ -23,59 +22,40 @@ export default async function handler(req, res) {
       )
       .join("\n") + "\nAI:";
 
-  console.log("USING MODEL: distilgpt2");
+    console.log("Prompt:", prompt);
+    console.log("USING MODEL: distilgpt2");
 
-const response = await fetch(
-  "https://router.huggingface.co/hf-inference/models/distilgpt2",
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.HF_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      inputs: prompt,
-      parameters: {
-        max_new_tokens: 80
+    const response = await fetch(
+      "https://router.huggingface.co/hf-inference/models/distilgpt2",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.HF_API_KEY}`,
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          inputs: prompt,
+          parameters: {
+            max_new_tokens: 80
+          }
+        })
       }
-    })
-  }
-);
-  {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${process.env.HF_API_KEY}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      inputs: prompt,
-      parameters: {
-        max_new_tokens: 100
-      }
-    })
-  }
-);
+    );
 
     const data = await response.json();
 
     console.log("HF response:", data);
 
-    // Handle HF errors
     if (!response.ok) {
       return res.status(response.status).json({
-        error: data.error || "HF API failed",
-        raw: data
+        error: data.error || "HF API failed"
       });
     }
 
-    // HF usually returns array
-    let output = "";
-
-    if (Array.isArray(data)) {
-      output = data[0]?.generated_text || "";
-    } else {
-      output = data.generated_text || "";
-    }
+    const output =
+      Array.isArray(data)
+        ? data[0]?.generated_text
+        : data.generated_text;
 
     return res.status(200).json({
       response: output || "No response generated"
