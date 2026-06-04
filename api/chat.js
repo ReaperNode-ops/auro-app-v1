@@ -23,24 +23,24 @@ export default async function handler(req, res) {
       .join("\n") + "\nAI:";
 
     console.log("Prompt:", prompt);
-    console.log("USING MODEL: distilgpt2");
+    console.log("USING MODEL: gpt2");
 
-    const response = await fetch(
-      "https://router.huggingface.co/hf-inference/models/distilgpt2",
-      {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${process.env.HF_API_KEY}`,
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          inputs: prompt,
-          parameters: {
-            max_new_tokens: 80
-          }
-        })
+const response = await fetch(
+  "https://api-inference.huggingface.co/models/gpt2",
+  {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.HF_API_KEY}`,
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      inputs: prompt,
+      parameters: {
+        max_new_tokens: 80
       }
-    );
+    })
+  }
+);
 
     const data = await response.json();
 
