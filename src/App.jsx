@@ -2238,7 +2238,7 @@ const responseText = await auroChat([
             </div>
           ) : (
             <div style={{ fontSize:11, color: remaining <= 1 ? "#f87171" : T.muted, fontWeight:600 }}>
-              {remaining}/{limit} messages left
+              {Number(remaining) || 0}/{Number(limit) || 0} messages left
             </div>
           )}
         </div>
