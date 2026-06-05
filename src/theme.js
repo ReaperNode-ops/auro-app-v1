@@ -1,4 +1,4 @@
-const T = {
+export const T = {
   bg: "#070708",
   surface: "#0d0d0f",
   card: "#111114",
