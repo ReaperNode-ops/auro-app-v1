@@ -27,7 +27,7 @@ messages: [
 ],
 
 
-      max_tokens: 80,
+      max_tokens: 300,
       temperature: 0.7
     });
 
