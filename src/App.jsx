@@ -2156,113 +2156,75 @@ const [messages, setMessages] = useState(() => {
   const buildHistory = (currentMessages) =>
     currentMessages.slice(-10).map(m => ({ role: m.role, text: m.text }));
 
-  const sendMessage = async (text) => {
-    const trimmed = (text || inputText).trim();
-    if (!trimmed || isTyping) return;
 
-    if (msgsUsed >= limit) { setShowLimitBanner(true); return; }
+const sendMessage = async (text) => {
+  const trimmed = (text || inputText).trim();
+  if (!trimmed || isTyping) return;
 
-    const userMsg = {
-      id:   Date.now(),
-      role: "user",
-      text: trimmed,
-      time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-    };
-if (!isPremium && msgsUsed >= limit) {
-  setShowLimitBanner(true);
-  return;
-}
-
-setMessages(prev => [...prev, userMsg]);
-setInputText("");
-setAiError("");
-setIsTyping(true);
-
-
-
-    const newCount = incrementDailyUsage(firebaseUid);
-    setMsgsUsed(newCount);
-
-    try {
-      const userContext = {
-        name:     userProfile?.name,
-        score:    userStats?.score,
-        streak:   userStats?.streak,
-        goals:    userStats?.goals,
-        progress: userStats?.progress,
-        isPremium,
-        answers:  answers ?? {},
-      };
-
-console.log("Sending Auro AI request:", trimmed);
-
-const responseText = await auroChat([
-  ...buildHistory(messages),
-  {
-    role: "user",
-    content: trimmed
+  if (!isPremium && msgsUsed >= limit) {
+    setShowLimitBanner(true);
+    return;
   }
-]);
 
-setMessages(prev => [...prev, {
-  id: Date.now() + 1,
-  role: "ai",
-  text: responseText,
-  time: new Date().toLocaleTimeString([], {
-    hour: "2-digit",
-    minute: "2-digit"
-  }),
-}]);
-
-setMsgsUsed(prev => {
-  const updated = prev + 1;
-
-  try {
-    const d = new Date();
-
-    const dk =
-      `auro_chat_usage_${firebaseUid ?? "anon"}_` +
-      `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
-
-    localStorage.setItem(dk, String(updated));
-  } catch (_) {}
-
-  return updated;
-});
-
-
-
-} catch (err) {
-  setAiError(
-    err?.message ?? "Something went wrong. Please try again."
-  );
-
-
-
-try {
-  // AI call
-  const responseText = await auroChat([...]);
-
-  setMessages(prev => [...prev, {
-    id: Date.now() + 1,
-    role: "ai",
-    text: responseText,
+  const userMsg = {
+    id: Date.now(),
+    role: "user",
+    text: trimmed,
     time: new Date().toLocaleTimeString([], {
       hour: "2-digit",
       minute: "2-digit"
     }),
-  }]);
+  };
 
-  setMsgsUsed(prev => prev + 1);
+  setMessages(prev => [...prev, userMsg]);
+  setInputText("");
+  setAiError("");
+  setIsTyping(true);
 
-} catch (err) {
-  setAiError(
-    err?.message ?? "Something went wrong. Please try again."
-  );
+  try {
+    const responseText = await auroChat([
+      ...buildHistory(messages),
+      {
+        role: "user",
+        content: trimmed
+      }
+    ]);
 
-} finally {
-  setIsTyping(false);
-}
+    setMessages(prev => [...prev, {
+      id: Date.now() + 1,
+      role: "ai",
+      text: responseText,
+      time: new Date().toLocaleTimeString([], {
+        hour: "2-digit",
+        minute: "2-digit"
+      }),
+    }]);
+
+    setMsgsUsed(prev => {
+      const updated = prev + 1;
+
+      try {
+        const d = new Date();
+        const dk =
+          `auro_chat_usage_${firebaseUid ?? "anon"}_` +
+          `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+
+        localStorage.setItem(dk, String(updated));
+      } catch (_) {}
+
+      return updated;
+    });
+
+  } catch (err) {
+    setAiError(
+      err?.message ?? "Something went wrong. Please try again."
+    );
+
+  } finally {
+    setIsTyping(false);
+  }
+};
+
 
 
 
