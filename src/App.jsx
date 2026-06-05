@@ -2239,13 +2239,11 @@ setMsgsUsed(prev => {
 
 
 } catch (err) {
-  setAiError(
-    err?.message ?? "Something went wrong. Please try again."
-  );
+  setAiError(...);
 } finally {
   setIsTyping(false);
 }
-
+};
 
 const safeLimit = Number(limit ?? 3);
 const safeUsed = Number(msgsUsed ?? 0);
