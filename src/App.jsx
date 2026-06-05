@@ -2238,12 +2238,19 @@ setMsgsUsed(prev => {
   );
 
 
+
+try {
+  // AI call + setMessages + setMsgsUsed
 } catch (err) {
-  setAiError(...);
+  setAiError(
+    err?.message ?? "Something went wrong. Please try again."
+  );
 } finally {
   setIsTyping(false);
 }
 };
+
+
 
 const safeLimit = Number(limit ?? 3);
 const safeUsed = Number(msgsUsed ?? 0);
