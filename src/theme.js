@@ -1,1 +1,21 @@
-
+const T = {
+  bg: "#070708",
+  surface: "#0d0d0f",
+  card: "#111114",
+  cardHover: "#16161a",
+  border: "#1f1e24",
+  borderGlow: "#f5c84230",
+  primary: "#4a9eff",
+  gold: "#f5c842",
+  goldDim: "#c9920e",
+  accent: "#4a9eff",
+  accentB: "#f5c842",
+  text: "#f0ece0",
+  muted: "#6a6455",
+  dim: "#2e2b24",
+  gradPrimary: "linear-gradient(135deg,#f5c842,#e08800)",
+  gradBlue: "linear-gradient(135deg,#4a9eff,#1a6fd4)",
+  gradDual: "linear-gradient(135deg,#f5c842 0%,#c9920e 40%,#4a9eff 100%)",
+  gradCard: "linear-gradient(145deg,#111114,#0d0d0f)",
+  gradHero: "linear-gradient(160deg,#07060a 0%,#080709 40%,#060709 100%)",
+};
