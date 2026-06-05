@@ -2168,10 +2168,17 @@ const [messages, setMessages] = useState(() => {
       text: trimmed,
       time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
     };
-    setMessages(prev => [...prev, userMsg]);
-    setInputText("");
-    setAiError("");
-    setIsTyping(true);
+if (!isPremium && msgsUsed >= limit) {
+  setShowLimitBanner(true);
+  return;
+}
+
+setMessages(prev => [...prev, userMsg]);
+setInputText("");
+setAiError("");
+setIsTyping(true);
+
+
 
     const newCount = incrementDailyUsage(firebaseUid);
     setMsgsUsed(newCount);
@@ -2197,17 +2204,27 @@ const responseText = await auroChat([
   }
 ]);
 
+setMessages(prev => [...prev, {
+  id: Date.now() + 1,
+  role: "ai",
+  text: responseText,
+  time: new Date().toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit"
+  }),
+}]);
 
-      setMessages(prev => [...prev, {
-        id:   Date.now() + 1,
-        role: "ai",
-        text: responseText,
-        time: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
-      }]);
-    } catch (err) {
-      setAiError(err?.message ?? "Something went wrong. Please try again.");
-      const refunded = Math.max(0, newCount - 1);
-      setMsgsUsed(refunded);
+setMsgsUsed(prev => prev + 1);
+
+} catch (err) {
+  setAiError(
+    err?.message ?? "Something went wrong. Please try again."
+  );
+
+  const refunded = Math.max(0, newCount - 1);
+
+  setMsgsUsed(refunded);
+
       try {
         const d = new Date();
         const dk = `auro_chat_usage_${firebaseUid ?? "anon"}_${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
