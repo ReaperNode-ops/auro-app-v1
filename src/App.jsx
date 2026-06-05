@@ -2214,59 +2214,156 @@ setMessages(prev => [...prev, {
   }),
 }]);
 
-setMsgsUsed(prev => prev + 1);
+setMsgsUsed(prev => {
+  const updated = prev + 1;
+
+  try {
+    const d = new Date();
+
+    const dk =
+      `auro_chat_usage_${firebaseUid ?? "anon"}_` +
+      `${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
+
+    localStorage.setItem(dk, String(updated));
+  } catch (_) {}
+
+  return updated;
+});
+
+
 
 } catch (err) {
   setAiError(
     err?.message ?? "Something went wrong. Please try again."
   );
 
-  const refunded = Math.max(0, newCount - 1);
 
-  setMsgsUsed(refunded);
+} catch (err) {
+  setAiError(
+    err?.message ?? "Something went wrong. Please try again."
+  );
+} finally {
+  setIsTyping(false);
+}
 
-      try {
-        const d = new Date();
-        const dk = `auro_chat_usage_${firebaseUid ?? "anon"}_${d.getFullYear()}-${d.getMonth()+1}-${d.getDate()}`;
-        localStorage.setItem(dk, String(refunded));
-      } catch (_) {}
-    } finally {
-      setIsTyping(false);
-    }
-  };
 
-  const remaining =
-  Math.max(0, Number(limit) - Number(msgsUsed || 0));
-  const hasMessages = messages.length > 0;
+const safeLimit = Number(limit ?? 3);
+const safeUsed = Number(msgsUsed ?? 0);
 
-  return (
-    <div style={{ display:"flex", flexDirection:"column", minHeight:440, animation:"fadeIn 0.35s ease" }}>
+const remaining = Math.max(0, safeLimit - safeUsed);
+const hasMessages = messages.length > 0;
 
-      {/* Header */}
-      <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16, paddingBottom:14, borderBottom:`1px solid ${T.border}` }}>
-        <div style={{ display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:38, height:38, borderRadius:12, background:`${T.primary}15`, border:`1px solid ${T.primary}30`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, position:"relative" }}>
-            🤖
-            <div style={{ position:"absolute", bottom:0, right:0, width:10, height:10, borderRadius:"50%", background:"#34d399", border:`2px solid ${T.surface}` }} />
-          </div>
-          <div>
-            <div style={{ fontSize:14, fontWeight:800, color:T.text }}>Auro AI Coach</div>
-            <div style={{ fontSize:11, color:"#34d399", fontWeight:600 }}>● Auro AI Core</div>
-          </div>
+return (
+  <div style={{
+    display: "flex",
+    flexDirection: "column",
+    minHeight: 440,
+    animation: "fadeIn 0.35s ease"
+  }}>
+
+    {/* Header */}
+    <div style={{
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "space-between",
+      marginBottom: 16,
+      paddingBottom: 14,
+      borderBottom: `1px solid ${T.border}`
+    }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+        <div style={{
+          width: 38,
+          height: 38,
+          borderRadius: 12,
+          background: `${T.primary}15`,
+          border: `1px solid ${T.primary}30`,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+          fontSize: 18,
+          position: "relative"
+        }}>
+          🤖
+          <div style={{
+            position: "absolute",
+            bottom: 0,
+            right: 0,
+            width: 10,
+            height: 10,
+            borderRadius: "50%",
+            background: "#34d399",
+            border: `2px solid ${T.surface}`
+          }} />
         </div>
-        <div style={{ textAlign:"right" }}>
-          {isPremium ? (
-            <div style={{ display:"inline-flex", alignItems:"center", gap:5, background:`${T.gold}15`, border:`1px solid ${T.gold}40`, borderRadius:12, padding:"4px 10px" }}>
-              <span style={{ fontSize:10, fontWeight:800, color:T.gold }}>⭐ Premium</span>
-            </div>
-          ) : (
-            <div style={{ fontSize:11, color: remaining <= 1 ? "#f87171" : T.muted, fontWeight:600 }}>
-              {Number(remaining) || 0}/{Number(limit) || 0} messages left
-            </div>
-          )}
+
+        <div>
+          <div style={{ fontSize: 14, fontWeight: 800, color: T.text }}>
+            Auro AI Coach
+          </div>
+          <div style={{ fontSize: 11, color: "#34d399", fontWeight: 600 }}>
+            ● Auro AI Core
+          </div>
         </div>
       </div>
 
+      <div style={{ textAlign: "right" }}>
+        {isPremium ? (
+          <div style={{
+            display: "inline-flex",
+            alignItems: "center",
+            gap: 5,
+            background: `${T.gold}15`,
+            border: `1px solid ${T.gold}40`,
+            borderRadius: 12,
+            padding: "4px 10px"
+          }}>
+            <span style={{
+              fontSize: 10,
+              fontWeight: 800,
+              color: T.gold
+            }}>
+              ⭐ Premium
+            </span>
+          </div>
+        ) : (
+          <div style={{
+            fontSize: 11,
+            color: remaining <= 1 ? "#f87171" : T.muted,
+            fontWeight: 600
+          }}>
+            {remaining}/{safeLimit} messages left
+          </div>
+        )}
+      </div>
+    </div>
+
+    {/* Clear Chat Button */}
+    {hasMessages && (
+      <div style={{
+        display: "flex",
+        justifyContent: "flex-end",
+        marginBottom: 12
+      }}>
+        <button
+          onClick={() => {
+            localStorage.removeItem("auro_messages");
+            setMessages([]);
+          }}
+          style={{
+            padding: "8px 12px",
+            borderRadius: 10,
+            border: "none",
+            cursor: "pointer",
+            fontWeight: 600
+          }}
+        >
+          Clear Chat
+        </button>
+      </div>
+    )}
+
+
+      
       {/* Limit banner */}
       {showLimitBanner && (
         <div style={{ background:`${T.gold}15`, border:`1px solid ${T.gold}40`, borderRadius:14, padding:"12px 14px", marginBottom:12, animation:"fadeIn 0.2s ease" }}>
