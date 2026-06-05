@@ -2125,7 +2125,11 @@ function AIChatPage({ isPremium, onUpgrade, userProfile, userStats, answers, fir
   const PREMIUM_LIMIT = 25;
   const limit         = isPremium ? PREMIUM_LIMIT : FREE_LIMIT;
 
-  const [messages,        setMessages]        = useState([]);
+
+const [messages, setMessages] = useState(() => {
+  const saved = localStorage.getItem("auro_messages");
+  return saved ? JSON.parse(saved) : [];
+});
   const [inputText,       setInputText]       = useState("");
   const [isTyping,        setIsTyping]        = useState(false);
   const [msgsUsed, setMsgsUsed] =
