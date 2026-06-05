@@ -2139,6 +2139,8 @@ const [messages, setMessages] = useState(() => {
   const messagesEndRef = useRef(null);
   const inputRef       = useRef(null);
 
+  useEffect(() => { localStorage.setItem( "auro_messages", JSON.stringify(messages) ); }, [messages]);
+
   const suggestions = [
     "What should I focus on today?",
     "Help me stay disciplined",
