@@ -2240,15 +2240,30 @@ setMsgsUsed(prev => {
 
 
 try {
-  // AI call + setMessages + setMsgsUsed
+  // AI call
+  const responseText = await auroChat([...]);
+
+  setMessages(prev => [...prev, {
+    id: Date.now() + 1,
+    role: "ai",
+    text: responseText,
+    time: new Date().toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit"
+    }),
+  }]);
+
+  setMsgsUsed(prev => prev + 1);
+
 } catch (err) {
   setAiError(
     err?.message ?? "Something went wrong. Please try again."
   );
+
 } finally {
   setIsTyping(false);
 }
-};
+
 
 
 
