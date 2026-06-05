@@ -13,7 +13,7 @@ export default async function handler(req, res) {
     console.log("PROMPT:", prompt);
 
     const result = await hf.chatCompletion({
-      model: "microsoft/Phi-3-mini-4k-instruct",
+      model: "meta-llama/Llama-3.1-8B-Instruct",
       messages: [
         {
           role: "user",
