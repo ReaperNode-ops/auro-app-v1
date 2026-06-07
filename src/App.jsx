@@ -3,6 +3,8 @@ import { ALL_OPTIONS, STEPS } from "./analysis/data/paths";
 import { getArchetype } from "./analysis/engine/archetype.legacy";
 import { Landing, QuestionCard, Results } from "./analysis/legacy/LegacyAnalysis";
 import { BASE_QUESTIONS, getAdaptiveQuestions } from "./analysis/data/questions.legacy";
+import { USE_ANALYSIS_V2 } from "./analysis/v2/flag.js";
+import AnalysisV2 from "./analysis/v2/AnalysisV2.jsx";
 import AuthScreen from "./AuthScreen.jsx";
 import { GlowOrb, Badge } from "./ui/primitives";
 import { auroChat } from "./auroAI.js";
@@ -2816,8 +2818,46 @@ export default function App() {
         {/* Main content */}
         <div style={{ width:"100%", maxWidth:480, flex:1, padding:"28px 16px 100px" }}>
           <div style={{ background:T.surface, borderRadius:26, padding:"28px 22px", border:`1px solid ${T.border}`, boxShadow:"0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)", position:"relative", overflow:"hidden" }}>
-            {screen === "landing" && <Landing onStart={start} />}
-            {screen === "quiz" && questions[qIndex] && (
+            {USE_ANALYSIS_V2 && (screen === "landing" || screen === "quiz") ? (
+  <AnalysisV2
+    onComplete={(legacyAnswers) => {
+      setAnswers(legacyAnswers);
+      setScreen("results");
+    }}
+    onExit={() => setScreen("landing")}
+  />
+) : (
+  <>
+    {screen === "landing" && <Landing onStart={start} />}
+    {screen === "quiz" && questions[qIndex] && (
+      <div>
+        <QuestionCard
+          key={questions[qIndex].id}
+          question={questions[qIndex]}
+          onAnswer={handleAnswer}
+          progress={qIndex + 1}
+          total={questions.length}
+        />
+        <button
+          onClick={goBack}
+          style={{
+            marginTop:14,
+            background:"none",
+            border:"none",
+            color:T.muted,
+            fontSize:13,
+            cursor:"pointer",
+            fontFamily:"inherit",
+            padding:"6px 0",
+            fontWeight:600
+          }}
+        >
+          ← Back
+        </button>
+      </div>
+    )}
+  </>
+)}
               <div>
                 <QuestionCard key={questions[qIndex].id} question={questions[qIndex]} onAnswer={handleAnswer} progress={qIndex+1} total={questions.length} />
                 <button onClick={goBack} style={{ marginTop:14, background:"none", border:"none", color:T.muted, fontSize:13, cursor:"pointer", fontFamily:"inherit", padding:"6px 0", fontWeight:600 }}>← Back</button>
