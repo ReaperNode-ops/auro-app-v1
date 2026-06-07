@@ -2821,12 +2821,12 @@ export default function App() {
             {screen === "landing" && (
   USE_ANALYSIS_V2 ? (
     <AnalysisV2
-      onComplete={(legacyAnswers) => {
-        setAnswers(legacyAnswers);
-        setScreen("results");
-      }}
-      onExit={() => setScreen("landing")}
-    />
+  onComplete={(legacyAnswers) => {
+    setAnswers(legacyAnswers);
+    setScreen("results");
+  }}
+  onExit={() => setScreen("landing")}
+/>
   ) : (
     <Landing onStart={start} />
   )
