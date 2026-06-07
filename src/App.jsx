@@ -5,7 +5,6 @@ import { BASE_QUESTIONS, getAdaptiveQuestions } from "./analysis/data/questions.
 import AuthScreen from "./AuthScreen.jsx";
 import { GlowOrb, Badge } from "./ui/primitives";
 import { auroChat } from "./auroAI.js";
-import { ALL_OPTIONS } from "../data/paths";
 import { ICON_B64 } from "./assets/icon";
 import { getDailyUsage, incrementDailyUsage } from "./usage.js";
 import { T } from "./theme";
