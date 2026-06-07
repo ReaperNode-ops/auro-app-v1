@@ -58,11 +58,11 @@ export default function AnalysisV2({ onComplete, onExit }) {
   const [picks, setPicks] = useState([]);
 
   const session = useMemo(() => deriveSession(history), [history]);
-  const currentQ = session.nextQuestion;
+ const currentQ = session.nextId ? QUESTIONS[session.nextId] : null;
   // When the engine reports done during the flow, run one calibration beat,
   // then convert and hand off to the existing results flow.
   useEffect(() => {
-    if (phase !== "flow" || !session.isComplete) return;
+    if (phase !== "flow" || !session.done) return;
     setPhase("calibrating");
     const legacy = toLegacyAnswers(session.derived);
     const t = setTimeout(() => {
