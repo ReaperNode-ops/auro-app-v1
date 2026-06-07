@@ -2818,51 +2818,48 @@ export default function App() {
         {/* Main content */}
         <div style={{ width:"100%", maxWidth:480, flex:1, padding:"28px 16px 100px" }}>
           <div style={{ background:T.surface, borderRadius:26, padding:"28px 22px", border:`1px solid ${T.border}`, boxShadow:"0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)", position:"relative", overflow:"hidden" }}>
-            {USE_ANALYSIS_V2 && (screen === "landing" || screen === "quiz") ? (
-  <AnalysisV2
-    onComplete={(legacyAnswers) => {
-      setAnswers(legacyAnswers);
-      setScreen("results");
-    }}
-    onExit={() => setScreen("landing")}
-  />
-) : (
-  <>
-    {screen === "landing" && <Landing onStart={start} />}
-    {screen === "quiz" && questions[qIndex] && (
-      <div>
-        <QuestionCard
-          key={questions[qIndex].id}
-          question={questions[qIndex]}
-          onAnswer={handleAnswer}
-          progress={qIndex + 1}
-          total={questions.length}
-        />
-        <button
-          onClick={goBack}
-          style={{
-            marginTop:14,
-            background:"none",
-            border:"none",
-            color:T.muted,
-            fontSize:13,
-            cursor:"pointer",
-            fontFamily:"inherit",
-            padding:"6px 0",
-            fontWeight:600
-          }}
-        >
-          ← Back
-        </button>
-      </div>
-    )}
-  </>
+            {screen === "landing" && (
+  USE_ANALYSIS_V2 ? (
+    <AnalysisV2
+      onComplete={(legacyAnswers) => {
+        setAnswers(legacyAnswers);
+        setScreen("results");
+      }}
+      onExit={() => setScreen("landing")}
+    />
+  ) : (
+    <Landing onStart={start} />
+  )
 )}
-              <div>
-                <QuestionCard key={questions[qIndex].id} question={questions[qIndex]} onAnswer={handleAnswer} progress={qIndex+1} total={questions.length} />
-                <button onClick={goBack} style={{ marginTop:14, background:"none", border:"none", color:T.muted, fontSize:13, cursor:"pointer", fontFamily:"inherit", padding:"6px 0", fontWeight:600 }}>← Back</button>
-              </div>
-            )}
+
+{screen === "quiz" && questions[qIndex] && (
+  <div>
+    <QuestionCard
+      key={questions[qIndex].id}
+      question={questions[qIndex]}
+      onAnswer={handleAnswer}
+      progress={qIndex + 1}
+      total={questions.length}
+    />
+    <button
+      onClick={goBack}
+      style={{
+        marginTop:14,
+        background:"none",
+        border:"none",
+        color:T.muted,
+        fontSize:13,
+        cursor:"pointer",
+        fontFamily:"inherit",
+        padding:"6px 0",
+        fontWeight:600
+      }}
+    >
+      ← Back
+    </button>
+  </div>
+)}
+             
             {screen === "results" && <Results answers={answers} onReset={() => setScreen("landing")} />}
             {screen === "nav-subscription" && <SubscriptionPage isPremium={isPremium} setIsPremium={setIsPremium} billingCycle={billingCycle} setBillingCycle={setBillingCycle} subLoading={subLoading} setSubLoading={setSubLoading} restoreLoading={restoreLoading} setRestoreLoading={setRestoreLoading} onToast={showToast} />}
             {screen === "nav-tracking" && (
