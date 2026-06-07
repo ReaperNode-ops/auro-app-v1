@@ -72,7 +72,7 @@ const currentQ = session.nextQuestion;
       });
     }, CALIBRATE_MS);
     return () => clearTimeout(t);
-  }, [phase, session, onComplete]);
+  }, [phase, session.isComplete]);
 
   function begin() {
     setPhase("flow");
