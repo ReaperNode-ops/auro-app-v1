@@ -70,7 +70,11 @@ const currentQ = session.nextQuestion;
     archetype: session.archetype,
     derived: session.derived,
   });
-}, [phase, session.isComplete]);
+}, [phase, session.isComplete, session.derived, session.archetype, onComplete]);
+
+function begin() {
+  setPhase("flow");
+}
   function choose(qid, optionIds) {
     setHistory((h) => [...h, { qid, optionIds }]);
     setPicks([]);
