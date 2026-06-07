@@ -110,9 +110,9 @@ const currentQ = session.nextQuestion;
 
         {phase === "flow" && currentQ && (
           <>
-            <ProgressBar asked={session.asked.length} done={session.done} />
+           <ProgressBar asked={session.asked.length} done={session.isComplete} />
             <QuestionView
-              qid={session.nextId}
+              qid={session.nextQuestionId}
               question={currentQ}
               picks={picks}
               setPicks={setPicks}
@@ -135,7 +135,7 @@ const currentQ = session.nextQuestion;
         <DebugPanel
           phase={phase}
           session={session}
-          currentId={session.nextId}
+          currentId={session.nextQuestionId}
         />
       )}
     </div>
@@ -275,7 +275,7 @@ function Calibrating({ archetype }) {
 
 // ── Dev-only debug panel ─────────────────────────────────────────────────────────
 function DebugPanel({ phase, session, currentId }) {
-  const legacy = session.done ? toLegacyAnswers(session.derived) : null;
+  const legacy = session.isComplete ? toLegacyAnswers(session.derived) : null;
   return (
     <div style={S.debug}>
       <div style={S.debugTitle}>V2 DEBUG (dev only)</div>
