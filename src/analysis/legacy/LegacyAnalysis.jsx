@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import { useState, useEffect } from "react";
 import { T } from "../../theme";
 import { ICON_B64 } from "../../assets/icon";
 import { GlowOrb, Badge } from "../../ui/primitives";
