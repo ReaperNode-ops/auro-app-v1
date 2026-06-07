@@ -4,4 +4,4 @@
 //   true  → App mounts <AnalysisV2 /> for the landing/quiz screens.
 // Flip this one line to toggle. Nothing else changes.
 // ─────────────────────────────────────────────────────────────────────────────
-export const USE_ANALYSIS_V2 = true;
+export const USE_ANALYSIS_V2 = false;
