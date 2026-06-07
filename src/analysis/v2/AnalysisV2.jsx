@@ -64,27 +64,13 @@ const currentQ = session.nextQuestion;
   useEffect(() => {
   if (phase !== "flow" || !session.isComplete) return;
 
-  console.log("V2 COMPLETE TRIGGERED", session);
-
-  setPhase("calibrating");
-
   const legacy = toLegacyAnswers(session.derived);
-  console.log("LEGACY ANSWERS", legacy);
 
-  const t = setTimeout(() => {
-    console.log("CALLING ON COMPLETE");
-    onComplete(legacy, {
-      archetype: session.archetype,
-      derived: session.derived,
-    });
-  }, CALIBRATE_MS);
-
-  return () => clearTimeout(t);
+  onComplete(legacy, {
+    archetype: session.archetype,
+    derived: session.derived,
+  });
 }, [phase, session.isComplete]);
-  function begin() {
-    setPhase("flow");
-  }
-
   function choose(qid, optionIds) {
     setHistory((h) => [...h, { qid, optionIds }]);
     setPicks([]);
