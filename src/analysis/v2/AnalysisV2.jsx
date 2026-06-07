@@ -62,17 +62,20 @@ const currentQ = session.nextQuestion;
   // When the engine reports done during the flow, run one calibration beat,
   // then convert and hand off to the existing results flow.
   useEffect(() => {
-    if (phase !== "flow" || !session.isComplete) return;
-    setPhase("calibrating");
-    const legacy = toLegacyAnswers(session.derived);
-    const t = setTimeout(() => {
-      onComplete(legacy, {
-        archetype: session.archetype,
-        derived: session.derived,
-      });
-    }, CALIBRATE_MS);
-    return () => clearTimeout(t);
-  }, [phase, session.isComplete]);
+  if (phase !== "flow" || !session.isComplete) return;
+  setPhase("calibrating");
+
+  const legacy = toLegacyAnswers(session.derived);
+
+  const t = setTimeout(() => {
+    onComplete(legacy, {
+      archetype: session.archetype,
+      derived: session.derived,
+    });
+  }, CALIBRATE_MS);
+
+  return () => clearTimeout(t);
+}, [phase, session.isComplete]);
 
   function begin() {
     setPhase("flow");
