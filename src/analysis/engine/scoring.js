@@ -1,3 +1,4 @@
+import { ALL_OPTIONS } from "../data/paths.js";
 export function scoreOptions(answers) {
   const skills = (answers.skills || []).map(s => s.toLowerCase());
   const interests = (answers.interests || []).map(i => i.toLowerCase());
