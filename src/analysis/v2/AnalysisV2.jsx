@@ -63,11 +63,16 @@ const currentQ = session.nextQuestion;
   // then convert and hand off to the existing results flow.
   useEffect(() => {
   if (phase !== "flow" || !session.isComplete) return;
+
+  console.log("V2 COMPLETE TRIGGERED", session);
+
   setPhase("calibrating");
 
   const legacy = toLegacyAnswers(session.derived);
+  console.log("LEGACY ANSWERS", legacy);
 
   const t = setTimeout(() => {
+    console.log("CALLING ON COMPLETE");
     onComplete(legacy, {
       archetype: session.archetype,
       derived: session.derived,
@@ -76,7 +81,6 @@ const currentQ = session.nextQuestion;
 
   return () => clearTimeout(t);
 }, [phase, session.isComplete]);
-
   function begin() {
     setPhase("flow");
   }
