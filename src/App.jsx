@@ -2823,7 +2823,7 @@ export default function App() {
     <AnalysisV2
   onComplete={(legacyAnswers) => {
     setAnswers(legacyAnswers);
-    setScreen("results");
+    setScreen("nav-tracking");
   }}
   onExit={() => setScreen("landing")}
 />
