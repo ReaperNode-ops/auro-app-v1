@@ -8,19 +8,19 @@
 //   2. archetype reveal card
 //   3. identity line
 //   4. mirror copy
-//   5. top recommended paths  (now selectable — user must pick one)
+//   5. top recommended paths  (selectable — user must pick one)
 //   6. final handoff CTA (gated until a path is selected)
 //
-// It READS the existing scorer (engine/scoring.js) to rank paths — it does not
-// modify it. The CTA calls onContinue(selectedPath); AnalysisV2 wires onContinue
-// to the existing completion/handoff (which currently ignores the argument —
-// the selected path is there for when Tracking integration lands). No Tracking
-// integration yet (intentional).
+// Path ranking now uses the V2-NATIVE scorer (scoreV2Paths), which reads the
+// derived profile + archetype directly — NOT the legacy scoreOptions(). The
+// legacy bridge (legacyAnswers) is still received for compatibility/handoff but
+// is no longer used to rank the reveal. The legacy scorer is untouched (V1).
 //
 // Props:
 //   derived       the completed V2 derived profile (session.derived)
 //   archetype     { key, reasons } from session.archetype
-//   legacyAnswers the bridged legacy answers (from toLegacyAnswers)
+//   legacyAnswers the bridged legacy answers (kept for compatibility; not used
+//                 for ranking anymore)
 //   onContinue(selectedPath)  called by the CTA after a path is chosen
 //
 // Top-level function declarations per the project's React rule.
@@ -30,7 +30,7 @@ import { useEffect, useState } from "react";
 import { T } from "../../theme.js";
 import { ARCHETYPES } from "../data/archetypes.js";
 import { styleFor } from "./archetypes.js";
-import { scoreOptions } from "../engine/scoring.js";
+import { scoreV2Paths } from "./scoreV2Paths.js";
 
 const C = {
   gold: (T && T.gold) || "#f5c842",
@@ -74,7 +74,8 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue }
   const copy = ARCHETYPES[key] || ARCHETYPES.specialist;
   const sty = styleFor(key);
 
-  const ranked = scoreOptions(legacyAnswers).slice(0, 4);
+  // V2-native ranking: reads the derived profile + archetype directly.
+  const ranked = scoreV2Paths({ derived, archetype }).slice(0, 4);
   const topScore = ranked.length ? ranked[0].score : 1;
   const chips = profileChips(derived);
 
