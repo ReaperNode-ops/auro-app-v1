@@ -232,6 +232,146 @@ export const QUESTIONS = {
       { id: "u_none",   label: "No hard deadline",         gates: { urgency: "none" } },
     ],
   },
+
+  // ── Q13 — Readiness (new; data-only, not yet wired into branching) ─────────
+  readiness: {
+    type: "tap",
+    prompt: "What are you starting with right now?",
+    options: [
+      { id: "r_none",   label: "No real experience yet",
+        gates: { readiness: "none" } },
+      { id: "r_basic",  label: "I have basic skills, but no proof yet",
+        gates: { readiness: "basic" } },
+      { id: "r_proof",  label: "I have some examples or proof",
+        gates: { readiness: "proof" } },
+      { id: "r_earned", label: "I've already made money from this before",
+        gates: { readiness: "earned" },
+        spectra: { incomeModel: { v: -0.3, w: 0.3 } } },
+    ],
+  },
+
+  // ── Q14 — Schedule / life stage (new; writes both time and lifeStage) ──────
+  schedule: {
+    type: "tap",
+    prompt: "What does your week actually look like?",
+    options: [
+      { id: "s_student",  label: "Still in school, limited hours",
+        gates: { lifeStage: "student",  time: "low" } },
+      { id: "s_parttime", label: "Part-time availability",
+        gates: { lifeStage: "partTime", time: "low" } },
+      { id: "s_flexible", label: "Flexible schedule",
+        gates: { lifeStage: "flexible", time: "mid" } },
+      { id: "s_serious",  label: "I can work on this seriously most days",
+        gates: { lifeStage: "serious",  time: "high" } },
+    ],
+  },
+
+  // ── Q15 — Tools / resources (new; multi-select; absorbs vehicle) ───────────
+  // Distinct boolean keys per option so multi-select survives Object.assign.
+  tools: {
+    type: "chips",
+    maxPick: 6,
+    prompt: "What do you already have access to?",
+    options: [
+      { id: "tool_laptop",  label: "Laptop or computer",
+        tags: { hasLaptop: true } },
+      { id: "tool_camera",  label: "Phone with a decent camera",
+        tags: { hasCamera: true } },
+      { id: "tool_vehicle", label: "Car or reliable transportation",
+        gates: { vehicle: "car" }, tags: { hasVehicle: true } },
+      { id: "tool_tools",   label: "Basic tools or equipment",
+        tags: { hasTools: true } },
+      { id: "tool_money",   label: "Some money to invest",
+        tags: { hasMoney: true } },
+      { id: "tool_none",    label: "None of these",
+        gates: { vehicle: "none" } },
+    ],
+  },
+
+  // ── Q16 — Quick money willingness (new; multi-select) ──────────────────────
+  // Boolean flag per option (NOT a shared quickType key) so picks accumulate.
+  quickMoney: {
+    type: "chips",
+    maxPick: 6,
+    prompt: "What would you actually be willing to do for faster money?",
+    options: [
+      { id: "qm_local",     label: "Local physical work",
+        tags: { quickLocalPhysical: true } },
+      { id: "qm_remote",    label: "Remote admin or support",
+        tags: { quickRemoteAdmin: true } },
+      { id: "qm_sales",     label: "Sales or outreach",
+        tags: { quickSalesOutreach: true } },
+      { id: "qm_tutoring",  label: "Tutoring or helping people",
+        tags: { quickTutoring: true } },
+      { id: "qm_content",   label: "Content, editing, or design",
+        tags: { quickContent: true } },
+      { id: "qm_reselling", label: "Reselling or flipping",
+        tags: { quickReselling: true } },
+    ],
+  },
+
+  // ── Q17 — Content type (new; single-select) ────────────────────────────────
+  contentType: {
+    type: "tap",
+    prompt: "What kind of content work would you actually do?",
+    options: [
+      { id: "ct_facecam",     label: "Face on camera",
+        spectra: { visibility: { v: +0.8, w: 0.5 } },
+        tags: { contentType: "faceCam" } },
+      { id: "ct_faceless",    label: "Faceless edits or clips",
+        spectra: { visibility: { v: -0.6, w: 0.4 } },
+        tags: { contentType: "facelessEdits" } },
+      { id: "ct_ugc",         label: "Product videos or UGC",
+        tags: { contentType: "ugc" } },
+      { id: "ct_educational", label: "Educational content",
+        domains: { teaching: 1 },
+        tags: { contentType: "educational" } },
+      { id: "ct_behind",      label: "I like content work, but not being the personality",
+        spectra: { visibility: { v: -0.6, w: 0.4 } },
+        tags: { contentType: "behindContent" } },
+    ],
+  },
+
+  // ── Q18 — Selling willingness (new; single-select) ─────────────────────────
+  selling: {
+    type: "tap",
+    prompt: "How willing are you to reach out or sell?",
+    options: [
+      { id: "sell_avoid",    label: "I'd rather avoid it",
+        gates: { selling: "avoid" },
+        spectra: { people: { v: -0.4, w: 0.3 } } },
+      { id: "sell_scripted", label: "I can message people if I have a script",
+        gates: { selling: "scripted" } },
+      { id: "sell_pitch",    label: "I'm fine pitching strangers",
+        gates: { selling: "pitch" },
+        spectra: { people: { v: +0.4, w: 0.3 } } },
+      { id: "sell_direct",   label: "I'm comfortable selling directly",
+        gates: { selling: "direct" },
+        spectra: { people: { v: +0.5, w: 0.3 } },
+        domains: { persuasion: 1 } },
+    ],
+  },
+
+  // ── Q19 — Local work type (new; single-select) ─────────────────────────────
+  localType: {
+    type: "tap",
+    prompt: "What kind of local work would you actually do?",
+    options: [
+      { id: "lt_physical", label: "Physical work",
+        gates: { localType: "physical" },
+        domains: { handsOn: 1 } },
+      { id: "lt_service",  label: "People or service work",
+        gates: { localType: "service" },
+        spectra: { people: { v: +0.4, w: 0.3 } } },
+      { id: "lt_cleaning", label: "Cleaning or detailing",
+        gates: { localType: "cleaning" },
+        domains: { handsOn: 1 } },
+      { id: "lt_delivery", label: "Delivery or transportation",
+        gates: { localType: "delivery" } },
+      { id: "lt_avoid",    label: "I'd rather avoid local work",
+        gates: { localType: "avoid" } },
+    ],
+  },
 };
  
 // Fast lookup of an option object by question id + option id.
@@ -240,4 +380,3 @@ export function getOption(questionId, optionId) {
   if (!q) return null;
   return q.options.find((o) => o.id === optionId) || null;
 }
- 
