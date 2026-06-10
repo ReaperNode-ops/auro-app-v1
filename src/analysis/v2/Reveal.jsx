@@ -31,6 +31,7 @@ import { T } from "../../theme.js";
 import { ARCHETYPES } from "../data/archetypes.js";
 import { styleFor } from "./archetypes.js";
 import { scoreV2Paths } from "./scoreV2Paths.js";
+import { buildDebugReport } from "./debugReport.js"; // TEMPORARY dev diagnostic
 
 const C = {
   gold: (T && T.gold) || "#f5c842",
@@ -58,10 +59,11 @@ function profileChips(d) {
 }
 function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 
-export default function Reveal({ derived, archetype, legacyAnswers, onContinue }) {
+export default function Reveal({ derived, archetype, legacyAnswers, onContinue, history }) {
   const [stage, setStage] = useState("lock"); // 'lock' → 'revealed'
   const [lockLabel, setLockLabel] = useState(0);
   const [selectedId, setSelectedId] = useState(null); // chosen path id (none by default)
+  const [copied, setCopied] = useState(false); // debug-report copy feedback (temporary)
 
   // cycle the lock labels, then settle into the reveal
   useEffect(() => {
@@ -80,6 +82,36 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue }
   const chips = profileChips(derived);
 
   const selectedPath = selectedId ? ranked.find((o) => o.id === selectedId) : null;
+
+  // ── TEMPORARY developer diagnostic: copy a full debug report to clipboard. ──
+  // Remove this handler, the button below, and debugReport.js when finished.
+  async function handleCopyDebug() {
+    const report = buildDebugReport({ derived, archetype, history, selectedPath });
+    try {
+      await navigator.clipboard.writeText(report);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+    } catch (e) {
+      // Fallback for non-secure contexts / missing clipboard API.
+      try {
+        const ta = document.createElement("textarea");
+        ta.value = report;
+        ta.style.position = "fixed";
+        ta.style.opacity = "0";
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand("copy");
+        document.body.removeChild(ta);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      } catch (_) {
+        // Last resort: log it so it can be copied from the console.
+        // eslint-disable-next-line no-console
+        console.log(report);
+        alert("Clipboard blocked — debug report logged to the console.");
+      }
+    }
+  }
 
   if (stage === "lock") {
     const labels = ["Reading your signal…", "Locking your profile…", "Calibration complete"];
@@ -149,6 +181,11 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue }
         {selectedPath ? `Lock in ${selectedPath.title}` : "Choose a path to continue"}
       </button>
       <div style={St.ctaSub}>You can explore the rest anytime.</div>
+
+      {/* TEMPORARY developer diagnostic — remove with debugReport.js when done. */}
+      <button type="button" style={St.debugBtn} onClick={handleCopyDebug}>
+        {copied ? "Copied \u2713" : "Copy debug report"}
+      </button>
     </div>
   );
 }
@@ -265,4 +302,8 @@ const St = {
   cta: { width: "100%", padding: "16px 20px", borderRadius: 16, border: "none",
     fontWeight: 800, fontSize: 16, marginTop: 8, transition: "opacity .15s ease" },
   ctaSub: { fontSize: 12, color: C.dim, textAlign: "center" },
+  debugBtn: { width: "100%", marginTop: 6, padding: "9px 12px", borderRadius: 10,
+    border: `1px dashed ${C.border}`, background: "transparent", color: C.dim,
+    fontSize: 12, letterSpacing: 0.5, cursor: "pointer",
+    fontFamily: "ui-monospace, Menlo, monospace" },
 };
