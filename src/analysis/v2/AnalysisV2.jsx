@@ -123,6 +123,7 @@ export default function AnalysisV2({ onComplete, onExit }) {
             archetype={session.archetype}
             legacyAnswers={legacy}
             onContinue={handoff}
+            history={history}
           />
         )}
       </div>
