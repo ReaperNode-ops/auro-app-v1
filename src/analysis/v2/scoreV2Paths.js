@@ -86,6 +86,13 @@ const EDIT_IDS = new Set([
   "short-form-editor", "video-editor", "thumbnail-designer", "content-clipper",
   "canva-designer", "logo-social-designer", "motion-graphics",
 ]);
+// Remote, laptop-based STARTER SKILL paths that match a creative/technical/words/
+// operations direction — the realistic-but-aligned options a remote beginner
+// should see first (distinct from generic admin gigs and physical flipping).
+const REMOTE_SKILL_IDS = new Set([
+  "content-clipper", "short-form-editor", "video-editor", "thumbnail-designer",
+  "canva-designer", "logo-social-designer", "caption-writer", "social-media-helper",
+]);
 const LAPTOP_DOMAIN_TAGS = [
   "coding/tech", "technology", "ai", "design/visual creativity",
   "writing/storytelling", "organisation/admin", "marketing/growth", "finance/numbers",
@@ -166,6 +173,19 @@ function buildContext(derived, archetype) {
     Object.entries(derived.domainScores || {}).filter(([, v]) => v > 0).map(([k]) => k)
   );
 
+  // True when the user signals behind-the-scenes content WORK (not on camera).
+  const behindContent = contentType === "facelessEdits" || contentType === "behindContent";
+  // User has a laptop-based skill direction (creative/technical/words/operations).
+  const skillDomains = ["creative", "technical", "words", "operations"];
+  const hasSkillDomain =
+    skillDomains.includes(derived.domainTop) ||
+    skillDomains.includes(derived.domainSecond) ||
+    skillDomains.some((d) => pickedDomains.has(d));
+  // Remote + laptop + a skill direction + a content lean → surface remote starter
+  // SKILL paths over generic admin / physical flipping (4.6.4b rule 2).
+  const remoteSkillMode =
+    remoteOnly && hasLaptop && hasSkillDomain && (behindContent || qContent);
+
   return {
     arche, urgency, urgencyHigh, capital, locality, vehicle,
     readinessGate, lifeStage, selling, localType,
@@ -174,6 +194,7 @@ function buildContext(derived, archetype) {
     hasLaptop, hasCamera, hasTools, userHasVehicle, noVehicleNow,
     qLocal, qRemote, qSales, qTutor, qContent, qResell,
     contentType, lowReadiness, starterMode,
+    behindContent, hasSkillDomain, remoteSkillMode,
     pickedDomains,
     own: derived.ownership.position,
     inc: derived.incomeModel.position,
@@ -205,6 +226,11 @@ function scoreOne(opt, c) {
   const speed = opt.speed;
   const diff = opt.difficulty;
   const reasons = [];
+
+  // Beginner paths that produce proof fast (days / a couple weeks) — the
+  // portfolio bar is low because samples can be built quickly.
+  const ttf = String(opt.timeToFirst || "");
+  const quickProof = diff === "Beginner" && /day|wk/i.test(ttf) && !/mo/i.test(ttf);
 
   let fit = 50;   // aptitude + disposition + archetype
   let doab = 0;   // doability (constraints, readiness, resources, routing)
@@ -243,7 +269,7 @@ function scoreOne(opt, c) {
 
   if (c.contentType === "faceCam" && isOnCamera) { fit += 18; reasons.push("ct:faceCam"); }
   if (c.contentType === "facelessEdits" || c.contentType === "behindContent") {
-    if (EDIT_IDS.has(id)) { fit += 22; reasons.push("ct:behind-edit"); }
+    if (EDIT_IDS.has(id) || REMOTE_SKILL_IDS.has(id)) { fit += 28; reasons.push("ct:behind-content"); }
     if (isOnCamera) { fit -= 24; reasons.push("ct:behind-on-camera-penalty"); }
   }
   if (c.contentType === "ugc" && (id === "ugc-creator" || t.has("video/editing"))) fit += 14;
@@ -301,7 +327,9 @@ function scoreOne(opt, c) {
     doab -= 34; reasons.push("requires-selling-high:wont");
   }
   if (opt.requiresExperience === "strong" && c.lowReadiness) { doab -= 30; reasons.push("needs-strong-exp"); }
-  if (opt.requiresPortfolio && c.lowReadiness) { doab -= 26; reasons.push("needs-portfolio"); }
+  if (opt.requiresPortfolio && c.lowReadiness) {
+    doab -= quickProof ? 10 : 26; reasons.push(quickProof ? "needs-portfolio:soft" : "needs-portfolio");
+  }
   if (opt.requiresAudience) doab -= 8;
 
   // Resource routing (tools)
@@ -313,13 +341,15 @@ function scoreOne(opt, c) {
   if (c.starterMode) {
     if (opt.readiness === "start-now") { doab += 24; reasons.push("starter:start-now"); }
     if (opt.readiness === "build-over-time") { doab -= 34; reasons.push("starter:build-over-time-penalty"); }
-    if (opt.tier === "starter") { doab += 28; reasons.push("starter:tier"); }
-    else if (opt.tier === "skill-builder") doab += 6;
+    if (opt.tier === "starter") { doab += 22; reasons.push("starter:tier"); }
+    else if (opt.tier === "skill-builder") doab += 8;
     else if (opt.tier === "creator") doab -= 30;
     else if (opt.tier === "business") doab -= 30;
     else if (opt.tier === "career") doab -= 34;
     else if (opt.tier === "long-term") doab -= 45;
-    if (opt.quickCash) { doab += 20; reasons.push("starter:quickCash"); }
+    // quickCash is a tiebreaker, not a trump card — kept small so a generic
+    // cash gig can't outrank a domain-aligned starter SKILL path.
+    if (opt.quickCash) { doab += 14; reasons.push("starter:quickCash"); }
     if (opt.studentFriendly && c.lifeStage === "student") { doab += 16; reasons.push("starter:studentFriendly"); }
     if (opt.requiresExperience === "strong") doab -= 20;
     if (opt.requiresAudience) doab -= 26;
@@ -328,24 +358,56 @@ function scoreOne(opt, c) {
     for (const tag of ["fast", "no-budget", "low-budget", "active", "flexible", "low-tech"]) {
       if (t.has(tag)) doab += 3;
     }
+
+    const domainAligned =
+      doms.includes(c.domainTop) || doms.includes(c.domainSecond) ||
+      doms.some((d) => c.pickedDomains.has(d));
+
+    // Directional fit AFTER doability: once a starter/learn-first path is
+    // realistic, reward the ones that actually match the user's direction so
+    // aligned skill paths beat generic gigs.
+    const starterish = opt.readiness === "start-now" || opt.readiness === "learn-first";
+    const starterTier = opt.tier === "starter" || opt.tier === "skill-builder";
+    if (starterish && starterTier && domainAligned) { doab += 18; reasons.push("starter:directional"); }
+    // Behind-the-scenes content lean → lift the matching content-service paths.
+    if (c.behindContent && REMOTE_SKILL_IDS.has(id)) { doab += 14; reasons.push("starter:behind-content"); }
+
     // Non-urgent starter users get recommendations WITHIN their area of interest:
     // an urgent broke user takes any fast gig, but a non-urgent beginner who
     // chose "creative" should see beginner CREATIVE work, not generic data entry.
-    if (!c.urgentNow && !c.urgencyHigh && c.pickedDomains.size > 0) {
-      const domainAligned =
-        doms.includes(c.domainTop) || doms.includes(c.domainSecond) ||
-        doms.some((d) => c.pickedDomains.has(d));
-      if (!domainAligned) { doab -= 40; reasons.push("starter:off-domain"); }
+    if (!c.urgentNow && !c.urgencyHigh && c.pickedDomains.size > 0 && !domainAligned) {
+      doab -= 40; reasons.push("starter:off-domain");
     }
   }
 
+  // Remote + laptop + skill direction + content lean → surface remote starter
+  // SKILL paths; keep generic admin (VA/data entry) as practical backup only.
+  if (c.remoteSkillMode) {
+    if (REMOTE_SKILL_IDS.has(id)) { doab += 24; reasons.push("remote-skill"); }
+    else if (id === "spreadsheet-service" &&
+             (c.pickedDomains.has("operations") || c.pickedDomains.has("technical"))) {
+      doab += 20; reasons.push("remote-skill:spreadsheet");
+    } else if (id === "virtual-assistant" || id === "data-entry") {
+      doab += 8; reasons.push("remote-skill:backup");
+    }
+  }
+
+  // Remote locality is a stronger FINAL constraint than earlier quick-money
+  // willingness: physical/local flipping shouldn't ride quickReselling to the
+  // top of a remote user's list.
+  if (c.remoteOnly && QUICK_RESELL_IDS.has(id)) { doab -= 30; reasons.push("remote:flip-penalty"); }
+
   // Quick-money routing (urgent users who said what they'd do)
-  if (c.qLocal && QUICK_LOCAL_IDS.has(id)) { doab += 30; reasons.push("quick:local"); }
+  if (c.qLocal && QUICK_LOCAL_IDS.has(id) && !c.remoteOnly) { doab += 30; reasons.push("quick:local"); }
   if (c.qRemote && QUICK_REMOTE_IDS.has(id)) { doab += 30; reasons.push("quick:remote"); }
   if (c.qSales && QUICK_SALES_IDS.has(id) && c.selling !== "avoid") { doab += 30; reasons.push("quick:sales"); }
   if (c.qTutor && QUICK_TUTOR_IDS.has(id)) { doab += 30; reasons.push("quick:tutor"); }
   if (c.qContent && QUICK_CONTENT_IDS.has(id)) { doab += 30; reasons.push("quick:content"); }
-  if (c.qResell && QUICK_RESELL_IDS.has(id)) { doab += 30; reasons.push("quick:resell"); }
+  // Reselling stays available but is dialed back for remote users so it lands as
+  // a backup, not the headline, unless commerce is clearly their direction.
+  if (c.qResell && QUICK_RESELL_IDS.has(id)) {
+    doab += c.remoteOnly ? 12 : 30; reasons.push("quick:resell");
+  }
 
   // localType routing
   if (c.localType === "physical" && (QUICK_LOCAL_IDS.has(id) || (localOnly && isTrade))) doab += 20;
