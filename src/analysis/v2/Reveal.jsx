@@ -273,86 +273,95 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   );
 }
 
-// ── Podium: native scroll-snap carousel; swipe / two-finger scroll / tap ─────
-// A real horizontally scrollable, snap-to-center track. The card closest to the
-// viewport centre becomes the selected one (drives Path Info + CTA). Trackpad
-// two-finger scroll and touch swipe are handled natively by the browser; no
-// synthetic gesture math, no libraries.
+// ── Podium: absolute coverflow; selected centered + in front, others flank it.
+// Selection via tap, pointer swipe, OR trackpad two-finger swipe (onWheel). ──
+const SWIPE_THRESHOLD = 45; // px of horizontal pointer travel before it's a swipe
+const WHEEL_THRESHOLD = 35; // px of horizontal wheel delta before it counts
+const WHEEL_COOLDOWN_MS = 350; // min gap between wheel-driven card changes
+
 function Podium({ top3, selectedIndex, onSelect }) {
-  const scrollerRef = useRef(null);
-  const cardRefs = useRef([]);
-  const ticking = useRef(false);
-  const programmatic = useRef(false); // suppress scroll→select churn during click-to-center
+  // Refs survive re-renders without causing them: track the active drag, swallow
+  // the synthetic click after a swipe, and throttle wheel-driven changes.
+  const drag = useRef({ x: 0, y: 0, active: false });
+  const suppressClick = useRef(false);
+  const lastWheel = useRef(0);
 
   if (!top3.length) return null;
   const count = top3.length;
+  const others = [0, 1, 2].filter((i) => i !== selectedIndex && i < count);
+  const slotOf = (i) =>
+    i === selectedIndex ? "center" : i === others[0] ? "left" : "right";
 
-  // Centre the initially-selected card on mount without a smooth animation.
-  useEffect(() => {
-    const el = cardRefs.current[selectedIndex];
-    if (el && el.scrollIntoView) el.scrollIntoView({ inline: "center", block: "nearest" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const clamp = (i) => Math.max(0, Math.min(count - 1, i));
 
-  // While scrolling, find the card whose centre is nearest the viewport centre.
-  function onScroll() {
-    if (ticking.current) return;
-    ticking.current = true;
-    requestAnimationFrame(() => {
-      ticking.current = false;
-      if (programmatic.current) return; // a click is smooth-centering; don't fight it
-      const sc = scrollerRef.current;
-      if (!sc) return;
-      const center = sc.scrollLeft + sc.clientWidth / 2;
-      let best = 0;
-      let bestDist = Infinity;
-      cardRefs.current.forEach((el, i) => {
-        if (!el) return;
-        const cardCenter = el.offsetLeft + el.offsetWidth / 2;
-        const d = Math.abs(cardCenter - center);
-        if (d < bestDist) { bestDist = d; best = i; }
-      });
-      if (best !== selectedIndex) onSelect(best);
-    });
+  function onPointerDown(e) {
+    suppressClick.current = false;
+    drag.current = { x: e.clientX, y: e.clientY, active: true };
+  }
+  function onPointerUp(e) {
+    const d = drag.current;
+    if (!d.active) return;
+    d.active = false;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    // horizontal intent past threshold = swipe; tiny / vertical drags are ignored
+    if (Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+      suppressClick.current = true; // swallow the click that fires on release
+      onSelect(clamp(selectedIndex + (dx < 0 ? 1 : -1)));
+    }
+  }
+  function onPointerCancel() {
+    drag.current.active = false;
   }
 
-  // Tap / click a card → select it and smooth-centre it.
-  function selectCard(i) {
-    onSelect(i);
-    const el = cardRefs.current[i];
-    if (el && el.scrollIntoView) {
-      programmatic.current = true;
-      el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-      setTimeout(() => { programmatic.current = false; }, 400);
+  // Trackpad two-finger horizontal swipe arrives as a wheel event with a
+  // dominant deltaX. Throttle so one physical swipe advances a single card.
+  function onWheel(e) {
+    if (Math.abs(e.deltaX) >= WHEEL_THRESHOLD && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      const now = Date.now();
+      if (now - lastWheel.current < WHEEL_COOLDOWN_MS) return;
+      lastWheel.current = now;
+      // scroll left (positive deltaX) → next, scroll right → previous
+      onSelect(clamp(selectedIndex + (e.deltaX > 0 ? 1 : -1)));
     }
+  }
+
+  // Tap handler shared by the cards: ignored once if it trails a swipe.
+  function selectCard(i) {
+    if (suppressClick.current) { suppressClick.current = false; return; }
+    onSelect(i);
   }
 
   return (
     <div
-      ref={scrollerRef}
-      className="auroScroller"
-      style={St.scroller}
-      onScroll={onScroll}
+      style={St.stage}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+      onWheel={onWheel}
     >
       {top3.map((path, i) => (
-        <div
+        <PodiumCard
           key={path.id}
-          ref={(el) => { cardRefs.current[i] = el; }}
-          style={St.snapItem}
-        >
-          <PodiumCard
-            path={path}
-            medal={MEDAL[i]}
-            selected={i === selectedIndex}
-            onSelect={() => selectCard(i)}
-          />
-        </div>
+          path={path}
+          medal={MEDAL[i]}
+          slot={slotOf(i)}
+          selected={i === selectedIndex}
+          onSelect={() => selectCard(i)}
+        />
       ))}
     </div>
   );
 }
 
-function PodiumCard({ path, medal, selected, onSelect }) {
+function PodiumCard({ path, medal, slot, selected, onSelect }) {
+  const slotStyle =
+    slot === "center"
+      ? { transform: "translateX(-50%) scale(1)", zIndex: 5, opacity: 1 }
+      : slot === "left"
+      ? { transform: "translateX(-50%) translateX(-110px) scale(0.8)", zIndex: 2, opacity: 0.92 }
+      : { transform: "translateX(-50%) translateX(110px) scale(0.8)", zIndex: 2, opacity: 0.92 };
+
   return (
     <button
       type="button"
@@ -360,14 +369,13 @@ function PodiumCard({ path, medal, selected, onSelect }) {
       aria-pressed={selected}
       style={{
         ...St.podCard,
-        transform: selected ? "scale(1)" : "scale(0.84)",
-        opacity: selected ? 1 : 0.86,
-        zIndex: selected ? 5 : 2,
+        ...slotStyle,
         borderColor: selected ? medal.accent : `${medal.accent}55`,
         background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
           ? `0 0 38px ${medal.glow}, inset 0 0 0 1px ${medal.accent}66`
           : `0 10px 24px rgba(0,0,0,0.5), inset 0 0 0 1px ${medal.accent}22`,
+        animation: selected ? "auroFloat 4s ease-in-out infinite" : "none",
       }}
     >
       <div style={St.medalRow}>
@@ -384,7 +392,7 @@ function PodiumCard({ path, medal, selected, onSelect }) {
       {selected ? (
         path.summary && <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>
       ) : (
-        <div style={{ ...St.podHint, color: medal.title }}>Swipe</div>
+        <div style={{ ...St.podHint, color: medal.title }}>Tap or swipe</div>
       )}
     </button>
   );
@@ -441,7 +449,7 @@ function Keyframes() {
       @keyframes auroUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes auroSpin2 { to { transform: rotate(360deg); } }
       @keyframes auroBreath { 0%,100% { opacity: .5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
-      .auroScroller::-webkit-scrollbar { display: none; height: 0; }
+      @keyframes auroFloat { 0%,100% { transform: translateX(-50%) scale(1) translateY(0); } 50% { transform: translateX(-50%) scale(1) translateY(-5px); } }
     `}</style>
   );
 }
@@ -474,18 +482,13 @@ const St = {
 
   sectionHead: { fontSize: 13, color: C.dim, letterSpacing: 1, margin: "8px 2px 0", fontWeight: 600, textAlign: "center" },
 
-  // Podium carousel (native horizontal scroll-snap)
-  scroller: { display: "flex", gap: 10, width: "100%", overflowX: "auto", overflowY: "hidden",
-    scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch",
-    // calc() centres the first/last card; ~94px = half the 188px card.
-    padding: "12px calc(50% - 94px)", margin: "2px 0",
-    scrollbarWidth: "none", msOverflowStyle: "none" },
-  snapItem: { flex: "0 0 auto", scrollSnapAlign: "center", display: "flex" },
-  podCard: { width: 188, minHeight: 176, boxSizing: "border-box",
+  // Podium stage (absolute coverflow)
+  stage: { position: "relative", width: "100%", height: 226, margin: "2px 0 2px",
+    touchAction: "pan-y", userSelect: "none", WebkitUserSelect: "none" },
+  podCard: { position: "absolute", top: 12, left: "50%", width: 188, minHeight: 176, boxSizing: "border-box",
     textAlign: "left", font: "inherit", color: C.text, cursor: "pointer", borderRadius: 20,
     border: "1px solid", padding: "14px 15px", display: "flex", flexDirection: "column", gap: 9,
-    transformOrigin: "center",
-    transition: "transform .3s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, opacity .3s ease, border-color .3s ease" },
+    transition: "transform .38s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, opacity .3s ease, border-color .3s ease" },
   medalRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
   medalPill: { fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase",
     padding: "4px 9px", borderRadius: 999, border: "1px solid" },
