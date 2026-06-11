@@ -25,7 +25,7 @@
 // Top-level function declarations per the project's React rule.
 // ─────────────────────────────────────────────────────────────────────────────
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { T } from "../../theme.js";
 import { ARCHETYPES } from "../data/archetypes.js";
 import { styleFor } from "./archetypes.js";
@@ -44,10 +44,27 @@ const C = {
 const LOCK_MS = 950; // the single earned pause before the archetype lands
 
 // Medal treatment by RANK (0 = top pick). Position is decided by selection.
+// Each medal carries solid dark card fills (selected vs idle) plus its own text
+// colours so titles/pills/checks read in the medal's hue while body stays cream.
 const MEDAL = [
-  { label: "Top pick", accent: "#f5c842", accent2: "#ffe9a3", glow: "rgba(245,200,66,0.42)" },
-  { label: "2nd pick", accent: "#cbd4e2", accent2: "#eef2f8", glow: "rgba(203,212,226,0.38)" },
-  { label: "3rd pick", accent: "#cf8a5c", accent2: "#e7b48a", glow: "rgba(207,138,92,0.38)" },
+  {
+    label: "Top pick", accent: "#f5c842", accent2: "#ffe9a3", glow: "rgba(245,200,66,0.45)",
+    cardSel: "linear-gradient(160deg, #4a3a14 0%, #241b09 100%)",
+    cardIdle: "linear-gradient(160deg, #2f2510 0%, #171106 100%)",
+    title: "#ffe6a0", body: "rgba(255,242,212,0.80)",
+  },
+  {
+    label: "2nd pick", accent: "#c9d4e4", accent2: "#eef3fa", glow: "rgba(201,212,228,0.42)",
+    cardSel: "linear-gradient(160deg, #363d49 0%, #191d23 100%)",
+    cardIdle: "linear-gradient(160deg, #262b33 0%, #13161a 100%)",
+    title: "#eaf1fb", body: "rgba(228,236,246,0.80)",
+  },
+  {
+    label: "3rd pick", accent: "#d08a58", accent2: "#ecb98c", glow: "rgba(208,138,88,0.42)",
+    cardSel: "linear-gradient(160deg, #4a3220 0%, #26180f 100%)",
+    cardIdle: "linear-gradient(160deg, #33241a 0%, #1a1009 100%)",
+    title: "#f3cba4", body: "rgba(242,212,186,0.80)",
+  },
 ];
 
 // ── Human-readable copy for v2Reasons + metadata ────────────────────────────
@@ -256,15 +273,56 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   );
 }
 
-// ── Podium: 3 cards, selected centered + in front ───────────────────────────
+// ── Podium: 3 cards, selected centered + in front; tap OR swipe to choose ────
+const SWIPE_THRESHOLD = 45; // px of horizontal travel before it counts as a swipe
+
 function Podium({ top3, selectedIndex, onSelect }) {
+  // Refs survive re-renders without causing them; used to track the active drag
+  // and to swallow the synthetic click that follows a swipe.
+  const drag = useRef({ x: 0, y: 0, active: false });
+  const suppressClick = useRef(false);
+
   if (!top3.length) return null;
-  const others = [0, 1, 2].filter((i) => i !== selectedIndex && i < top3.length);
+  const count = top3.length;
+  const others = [0, 1, 2].filter((i) => i !== selectedIndex && i < count);
   const slotOf = (i) =>
     i === selectedIndex ? "center" : i === others[0] ? "left" : "right";
 
+  const clamp = (i) => Math.max(0, Math.min(count - 1, i));
+
+  function onPointerDown(e) {
+    suppressClick.current = false;
+    drag.current = { x: e.clientX, y: e.clientY, active: true };
+  }
+  function onPointerUp(e) {
+    const d = drag.current;
+    if (!d.active) return;
+    d.active = false;
+    const dx = e.clientX - d.x;
+    const dy = e.clientY - d.y;
+    // horizontal intent + past threshold = swipe; tiny/vertical drags are ignored
+    if (Math.abs(dx) >= SWIPE_THRESHOLD && Math.abs(dx) > Math.abs(dy)) {
+      suppressClick.current = true; // swallow the click that fires on release
+      onSelect(clamp(selectedIndex + (dx < 0 ? 1 : -1)));
+    }
+  }
+  function onPointerCancel() {
+    drag.current.active = false;
+  }
+
+  // Tap handler shared by the cards: ignored once if it trails a swipe.
+  function selectCard(i) {
+    if (suppressClick.current) { suppressClick.current = false; return; }
+    onSelect(i);
+  }
+
   return (
-    <div style={St.stage}>
+    <div
+      style={St.stage}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onPointerCancel={onPointerCancel}
+    >
       {top3.map((path, i) => (
         <PodiumCard
           key={path.id}
@@ -272,7 +330,7 @@ function Podium({ top3, selectedIndex, onSelect }) {
           medal={MEDAL[i]}
           slot={slotOf(i)}
           selected={i === selectedIndex}
-          onSelect={() => onSelect(i)}
+          onSelect={() => selectCard(i)}
         />
       ))}
     </div>
@@ -284,8 +342,8 @@ function PodiumCard({ path, medal, slot, selected, onSelect }) {
     slot === "center"
       ? { transform: "translateX(-50%) scale(1)", zIndex: 5, opacity: 1 }
       : slot === "left"
-      ? { transform: "translateX(-50%) translateX(-110px) scale(0.8)", zIndex: 2, opacity: 0.9 }
-      : { transform: "translateX(-50%) translateX(110px) scale(0.8)", zIndex: 2, opacity: 0.9 };
+      ? { transform: "translateX(-50%) translateX(-110px) scale(0.8)", zIndex: 2, opacity: 0.92 }
+      : { transform: "translateX(-50%) translateX(110px) scale(0.8)", zIndex: 2, opacity: 0.92 };
 
   return (
     <button
@@ -295,18 +353,16 @@ function PodiumCard({ path, medal, slot, selected, onSelect }) {
       style={{
         ...St.podCard,
         ...slotStyle,
-        borderColor: selected ? medal.accent : "rgba(255,255,255,0.10)",
-        background: selected
-          ? `linear-gradient(165deg, ${medal.accent}1f, rgba(255,255,255,0.03))`
-          : "linear-gradient(165deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+        borderColor: selected ? medal.accent : `${medal.accent}55`,
+        background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
-          ? `0 0 36px ${medal.glow}, inset 0 0 0 1px ${medal.accent}55`
-          : "0 10px 26px rgba(0,0,0,0.4)",
+          ? `0 0 38px ${medal.glow}, inset 0 0 0 1px ${medal.accent}66`
+          : `0 10px 24px rgba(0,0,0,0.5), inset 0 0 0 1px ${medal.accent}22`,
         animation: selected ? "auroFloat 4s ease-in-out infinite" : "none",
       }}
     >
       <div style={St.medalRow}>
-        <span style={{ ...St.medalPill, background: `${medal.accent}22`, color: medal.accent, borderColor: `${medal.accent}55` }}>
+        <span style={{ ...St.medalPill, background: `${medal.accent}26`, color: medal.accent, borderColor: `${medal.accent}66` }}>
           {medal.label}
         </span>
         {selected && (
@@ -314,12 +370,12 @@ function PodiumCard({ path, medal, slot, selected, onSelect }) {
         )}
       </div>
 
-      <div style={{ ...St.podName, fontSize: selected ? 16 : 13.5 }}>{path.title}</div>
+      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 16 : 13.5 }}>{path.title}</div>
 
       {selected ? (
-        path.summary && <div style={St.podSummary}>{path.summary}</div>
+        path.summary && <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>
       ) : (
-        <div style={St.podHint}>Tap to choose</div>
+        <div style={{ ...St.podHint, color: medal.title }}>Tap or swipe</div>
       )}
     </button>
   );
@@ -410,7 +466,8 @@ const St = {
   sectionHead: { fontSize: 13, color: C.dim, letterSpacing: 1, margin: "8px 2px 0", fontWeight: 600, textAlign: "center" },
 
   // Podium stage
-  stage: { position: "relative", width: "100%", height: 226, margin: "2px 0 2px" },
+  stage: { position: "relative", width: "100%", height: 226, margin: "2px 0 2px",
+    touchAction: "pan-y", userSelect: "none", WebkitUserSelect: "none" },
   podCard: { position: "absolute", top: 12, left: "50%", width: 188, minHeight: 176, boxSizing: "border-box",
     textAlign: "left", font: "inherit", color: C.text, cursor: "pointer", borderRadius: 20,
     border: "1px solid", padding: "14px 15px", display: "flex", flexDirection: "column", gap: 9,
