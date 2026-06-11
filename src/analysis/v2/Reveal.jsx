@@ -1,27 +1,26 @@
 // ─────────────────────────────────────────────────────────────────────────────
-// Reveal.jsx — the V2-only reveal / results experience.
+// Reveal.jsx — the V2-only reveal / results experience (podium redesign).
 //
-// Replaces the legacy V1 Results page FOR V2 RUNS ONLY. AnalysisV2 renders this
-// at completion (phase === "flow" && session.isComplete) instead of calling
-// onComplete immediately. Sequence:
-//   1. lock / calibration beat
-//   2. archetype reveal card
-//   3. identity line
-//   4. mirror copy
-//   5. top recommended paths  (selectable — user must pick one)
-//   6. final handoff CTA (gated until a path is selected)
+// Sequence:
+//   1. lock / calibration beat (unchanged)
+//   2. Archetype Info card — glyph, title, identity, mirror, profile chips
+//   3. Podium — top 3 paths as gold / silver / bronze cards; the SELECTED card
+//      sits centered + enlarged + in front, the other two flank it smaller and
+//      behind. Tapping a side card centers it (selectedIndex state, no real
+//      scroll needed). Medal colour is fixed by rank; position follows selection.
+//   4. Path Info — detail panel for the currently selected path (human-readable)
+//   5. CTA — "Begin {title} Path" → onContinue(selectedPath)
+//   6. TEMPORARY "Copy debug report" button (kept working)
 //
-// Path ranking now uses the V2-NATIVE scorer (scoreV2Paths), which reads the
-// derived profile + archetype directly — NOT the legacy scoreOptions(). The
-// legacy bridge (legacyAnswers) is still received for compatibility/handoff but
-// is no longer used to rank the reveal. The legacy scorer is untouched (V1).
+// Ranking uses the V2-native scorer (scoreV2Paths). The legacy bridge
+// (legacyAnswers) is still received for compatibility but not used here.
 //
 // Props:
-//   derived       the completed V2 derived profile (session.derived)
+//   derived       completed V2 derived profile (session.derived)
 //   archetype     { key, reasons } from session.archetype
-//   legacyAnswers the bridged legacy answers (kept for compatibility; not used
-//                 for ranking anymore)
-//   onContinue(selectedPath)  called by the CTA after a path is chosen
+//   legacyAnswers bridged legacy answers (kept for compatibility; unused here)
+//   onContinue(selectedPath)  called by the CTA with the chosen path object
+//   history       answer history (for the debug report; optional)
 //
 // Top-level function declarations per the project's React rule.
 // ─────────────────────────────────────────────────────────────────────────────
@@ -44,6 +43,54 @@ const C = {
 
 const LOCK_MS = 950; // the single earned pause before the archetype lands
 
+// Medal treatment by RANK (0 = top pick). Position is decided by selection.
+const MEDAL = [
+  { label: "Top pick", accent: "#f5c842", accent2: "#ffe9a3", glow: "rgba(245,200,66,0.42)" },
+  { label: "2nd pick", accent: "#cbd4e2", accent2: "#eef2f8", glow: "rgba(203,212,226,0.38)" },
+  { label: "3rd pick", accent: "#cf8a5c", accent2: "#e7b48a", glow: "rgba(207,138,92,0.38)" },
+];
+
+// ── Human-readable copy for v2Reasons + metadata ────────────────────────────
+const REASON_LABELS = {
+  "domain:top": "Matches your strengths",
+  "domain:second": "Fits your interests",
+  "domain:picked": "In your wheelhouse",
+  "urgent:fast": "Fast to start",
+  "starter:start-now": "Start right away",
+  "starter:tier": "Beginner friendly",
+  "starter:quickCash": "Quick cash",
+  "starter:studentFriendly": "Student friendly",
+  "starter:directional": "On your path",
+  "starter:behind-content": "Behind the scenes",
+  "remote-skill": "Remote skill work",
+  "remote-skill:spreadsheet": "Remote skill work",
+  "remote-skill:backup": "Solid backup",
+  "ct:behind-content": "Behind-the-scenes content",
+  "ct:faceCam": "On-camera content",
+  "ct:educational": "Teaching content",
+  "quick:content": "Content work",
+  "quick:local": "Local work",
+  "quick:remote": "Remote admin",
+  "quick:sales": "Sales / outreach",
+  "quick:tutor": "Teaching / tutoring",
+  "quick:resell": "Reselling",
+  "relational:people": "People-facing",
+  "high-vis:content": "Public-facing",
+  "wants-asset": "Builds an asset",
+  "wants-active": "Paid for your work",
+};
+
+function cap(s) { return s ? s.charAt(0).toUpperCase() + s.slice(1) : s; }
+function tierLabel(tier) {
+  return tier ? tier.split("-").map(cap).join(" ") : null;
+}
+function readinessLabel(r) {
+  return r === "start-now" ? "Start now"
+    : r === "learn-first" ? "Learn as you go"
+    : r === "build-over-time" ? "Build over time"
+    : null;
+}
+
 // Build short profile chips from the derived spectra (the "why").
 function profileChips(d) {
   const chips = [];
@@ -57,12 +104,47 @@ function profileChips(d) {
   if (d.incomeModel.position > 0.2) chips.push("Asset-builder");
   return chips.slice(0, 4);
 }
-function cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+
+// Pick 2–4 human-readable reason chips for the selected path.
+function reasonChips(path) {
+  const seen = new Set();
+  const out = [];
+  const add = (label) => {
+    if (label && !seen.has(label)) { seen.add(label); out.push(label); }
+  };
+  for (const code of path.v2Reasons || []) {
+    if (out.length >= 4) break;
+    add(REASON_LABELS[code]);
+  }
+  if (out.length < 2) {
+    add(readinessLabel(path.readiness));
+    if (path.quickCash) add("Quick cash");
+    if (path.studentFriendly) add("Student friendly");
+    if (path.speed === "fast") add("Fast to start");
+    if (path.difficulty) add(path.difficulty);
+  }
+  return out.slice(0, 4);
+}
+
+// One short, human sentence on why this path fits.
+function whyCopy(path) {
+  const r = path.v2Reasons || [];
+  const strength =
+    r.includes("domain:top") ? "plays to your strongest area"
+    : r.includes("domain:second") ? "lines up with your interests"
+    : (r.includes("remote-skill") || r.some((x) => x.startsWith("ct:"))) ? "matches the kind of work you want to do"
+    : "fits the profile you just built";
+  const ramp =
+    path.readiness === "start-now" ? "You can start right now."
+    : path.readiness === "learn-first" ? "A short ramp, then you're earning."
+    : "It's a longer build, but the upside is real.";
+  return `This one ${strength}. ${ramp}`;
+}
 
 export default function Reveal({ derived, archetype, legacyAnswers, onContinue, history }) {
   const [stage, setStage] = useState("lock"); // 'lock' → 'revealed'
   const [lockLabel, setLockLabel] = useState(0);
-  const [selectedId, setSelectedId] = useState(null); // chosen path id (none by default)
+  const [selectedIndex, setSelectedIndex] = useState(0); // default = top pick
   const [copied, setCopied] = useState(false); // debug-report copy feedback (temporary)
 
   // cycle the lock labels, then settle into the reveal
@@ -76,15 +158,15 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   const copy = ARCHETYPES[key] || ARCHETYPES.specialist;
   const sty = styleFor(key);
 
-  // V2-native ranking: reads the derived profile + archetype directly.
-  const ranked = scoreV2Paths({ derived, archetype }).slice(0, 4);
-  const topScore = ranked.length ? ranked[0].score : 1;
+  // V2-native ranking → top 3 for the podium.
+  const ranked = scoreV2Paths({ derived, archetype });
+  const top3 = ranked.slice(0, 3);
   const chips = profileChips(derived);
 
-  const selectedPath = selectedId ? ranked.find((o) => o.id === selectedId) : null;
+  const safeIndex = Math.min(selectedIndex, Math.max(0, top3.length - 1));
+  const selectedPath = top3[safeIndex] || null;
 
   // ── TEMPORARY developer diagnostic: copy a full debug report to clipboard. ──
-  // Remove this handler, the button below, and debugReport.js when finished.
   async function handleCopyDebug() {
     const report = buildDebugReport({ derived, archetype, history, selectedPath });
     try {
@@ -92,7 +174,6 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
       setCopied(true);
       setTimeout(() => setCopied(false), 1500);
     } catch (e) {
-      // Fallback for non-secure contexts / missing clipboard API.
       try {
         const ta = document.createElement("textarea");
         ta.value = report;
@@ -105,7 +186,6 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       } catch (_) {
-        // Last resort: log it so it can be copied from the console.
         // eslint-disable-next-line no-console
         console.log(report);
         alert("Clipboard blocked — debug report logged to the console.");
@@ -128,11 +208,12 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
     <div style={St.wrap}>
       <Keyframes />
 
-      {/* 2–4: archetype card + identity + mirror */}
-      <div style={{ ...St.card, animation: "auroUp .5s ease both" }}>
+      {/* 2: Archetype Info card */}
+      <div style={{ ...St.archCard, animation: "auroUp .5s ease both" }}>
+        <div style={{ ...St.archGlow, background: `radial-gradient(120% 80% at 50% 0%, ${sty.accent}1f, transparent 70%)` }} />
         <div style={{ ...St.glyph, color: sty.accent }}>{sty.glyph}</div>
         <div style={St.kicker}>YOUR PROFILE</div>
-        <h1 style={{ ...St.title, backgroundImage: `linear-gradient(135deg, ${sty.accent2}, ${sty.accent})` }}>
+        <h1 style={{ ...St.archTitle, backgroundImage: `linear-gradient(135deg, ${sty.accent2}, ${sty.accent})` }}>
           {copy.title}
         </h1>
         <p style={St.identity}>{copy.identity}</p>
@@ -146,43 +227,28 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
         )}
       </div>
 
-      {/* 5: top recommended paths — selectable */}
-      <div style={St.pathsHead}>Pick where you want to start</div>
-      <div style={St.paths}>
-        {ranked.map((opt, i) => (
-          <PathCard
-            key={opt.id}
-            opt={opt}
-            pct={Math.max(72, Math.round((opt.score / topScore) * 99))}
-            best={i === 0}
-            accent={sty.accent}
-            delay={i * 0.08}
-            selected={selectedId === opt.id}
-            onSelect={() => setSelectedId(opt.id)}
-          />
-        ))}
-      </div>
+      {/* 3: Podium */}
+      <div style={St.sectionHead}>Choose your path</div>
+      <Podium top3={top3} selectedIndex={safeIndex} onSelect={setSelectedIndex} />
 
-      {/* 6: handoff CTA — gated until a path is selected */}
-      <button
-        style={{
-          ...St.cta,
-          backgroundImage: selectedPath
-            ? `linear-gradient(135deg, ${sty.accent2}, ${sty.accent})`
-            : "none",
-          background: selectedPath ? undefined : "rgba(255,255,255,0.06)",
-          color: selectedPath ? "#0a0b10" : C.dim,
-          cursor: selectedPath ? "pointer" : "not-allowed",
-          opacity: selectedPath ? 1 : 0.7,
-        }}
-        disabled={!selectedPath}
-        onClick={() => selectedPath && onContinue(selectedPath)}
-      >
-        {selectedPath ? `Lock in ${selectedPath.title}` : "Choose a path to continue"}
-      </button>
-      <div style={St.ctaSub}>You can explore the rest anytime.</div>
+      {/* 4: Path Info */}
+      {selectedPath && <PathInfo path={selectedPath} medal={MEDAL[safeIndex]} />}
 
-      {/* TEMPORARY developer diagnostic — remove with debugReport.js when done. */}
+      {/* 5: CTA */}
+      {selectedPath && (
+        <button
+          style={{
+            ...St.cta,
+            backgroundImage: `linear-gradient(135deg, ${MEDAL[safeIndex].accent2}, ${MEDAL[safeIndex].accent})`,
+          }}
+          onClick={() => onContinue(selectedPath)}
+        >
+          Begin {selectedPath.title} Path
+        </button>
+      )}
+      <div style={St.ctaSub}>You can explore the other paths anytime.</div>
+
+      {/* 6: TEMPORARY developer diagnostic — remove with debugReport.js when done. */}
       <button type="button" style={St.debugBtn} onClick={handleCopyDebug}>
         {copied ? "Copied \u2713" : "Copy debug report"}
       </button>
@@ -190,51 +256,111 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   );
 }
 
-// ── Top path card (selectable) ─────────────────────────────────────────────────
-function PathCard({ opt, pct, best, accent, delay, selected, onSelect }) {
+// ── Podium: 3 cards, selected centered + in front ───────────────────────────
+function Podium({ top3, selectedIndex, onSelect }) {
+  if (!top3.length) return null;
+  const others = [0, 1, 2].filter((i) => i !== selectedIndex && i < top3.length);
+  const slotOf = (i) =>
+    i === selectedIndex ? "center" : i === others[0] ? "left" : "right";
+
+  return (
+    <div style={St.stage}>
+      {top3.map((path, i) => (
+        <PodiumCard
+          key={path.id}
+          path={path}
+          medal={MEDAL[i]}
+          slot={slotOf(i)}
+          selected={i === selectedIndex}
+          onSelect={() => onSelect(i)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PodiumCard({ path, medal, slot, selected, onSelect }) {
+  const slotStyle =
+    slot === "center"
+      ? { transform: "translateX(-50%) scale(1)", zIndex: 5, opacity: 1 }
+      : slot === "left"
+      ? { transform: "translateX(-50%) translateX(-110px) scale(0.8)", zIndex: 2, opacity: 0.9 }
+      : { transform: "translateX(-50%) translateX(110px) scale(0.8)", zIndex: 2, opacity: 0.9 };
+
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
       style={{
-        ...St.path,
-        borderColor: selected ? accent : C.border,
-        background: selected ? `${accent}14` : C.card,
-        boxShadow: selected ? `0 0 26px ${accent}33` : "none",
-        animation: `auroUp .45s ease both`,
-        animationDelay: `${delay}s`,
+        ...St.podCard,
+        ...slotStyle,
+        borderColor: selected ? medal.accent : "rgba(255,255,255,0.10)",
+        background: selected
+          ? `linear-gradient(165deg, ${medal.accent}1f, rgba(255,255,255,0.03))`
+          : "linear-gradient(165deg, rgba(255,255,255,0.05), rgba(255,255,255,0.02))",
+        boxShadow: selected
+          ? `0 0 36px ${medal.glow}, inset 0 0 0 1px ${medal.accent}55`
+          : "0 10px 26px rgba(0,0,0,0.4)",
+        animation: selected ? "auroFloat 4s ease-in-out infinite" : "none",
       }}
     >
-      <div style={St.pathTop}>
-        <div style={St.pathTitle}>{opt.title}</div>
-        <div style={St.pathTopRight}>
-          {best && <span style={{ ...St.bestTag, background: `${accent}22`, color: accent }}>Best match</span>}
-          <span
-            style={{
-              ...St.check,
-              borderColor: selected ? accent : C.border,
-              background: selected ? accent : "transparent",
-              color: selected ? "#0a0b10" : "transparent",
-            }}
-          >
-            ✓
-          </span>
-        </div>
+      <div style={St.medalRow}>
+        <span style={{ ...St.medalPill, background: `${medal.accent}22`, color: medal.accent, borderColor: `${medal.accent}55` }}>
+          {medal.label}
+        </span>
+        {selected && (
+          <span style={{ ...St.podCheck, background: medal.accent, color: "#0a0b10" }}>✓</span>
+        )}
       </div>
-      {opt.summary && <div style={St.pathSummary}>{opt.summary}</div>}
-      <div style={St.pathMeta}>
-        {opt.earnings && <span style={St.earn}>{opt.earnings}</span>}
-        <span style={St.matchNum}>{pct}% match</span>
-      </div>
-      <div style={St.matchTrack}>
-        <div style={{ ...St.matchFill, width: `${pct}%`, background: `linear-gradient(90deg, ${C.blue}, ${accent})` }} />
-      </div>
+
+      <div style={{ ...St.podName, fontSize: selected ? 16 : 13.5 }}>{path.title}</div>
+
+      {selected ? (
+        path.summary && <div style={St.podSummary}>{path.summary}</div>
+      ) : (
+        <div style={St.podHint}>Tap to choose</div>
+      )}
     </button>
   );
 }
 
-// ── Lock-beat visual ─────────────────────────────────────────────────────────
+// ── Path Info detail panel ──────────────────────────────────────────────────
+function PathInfo({ path, medal }) {
+  const meta = [
+    path.earnings && { label: path.earnings, gold: true },
+    path.timeToFirst && { label: path.timeToFirst },
+    path.difficulty && { label: path.difficulty },
+    tierLabel(path.tier) && { label: tierLabel(path.tier) },
+  ].filter(Boolean);
+  const chips = reasonChips(path);
+
+  return (
+    <div style={{ ...St.infoCard, animation: "auroUp .35s ease both" }}>
+      <div style={St.infoKicker}>PATH DETAIL</div>
+      <h2 style={{ ...St.infoTitle, backgroundImage: `linear-gradient(135deg, ${medal.accent2}, ${medal.accent})` }}>
+        {path.title}
+      </h2>
+      <p style={St.infoWhy}>{whyCopy(path)}</p>
+
+      <div style={St.metaRow}>
+        {meta.map((m, i) => (
+          <span key={i} style={{ ...St.metaPill, color: m.gold ? C.gold : C.text }}>{m.label}</span>
+        ))}
+      </div>
+
+      {chips.length > 0 && (
+        <div style={St.reasonRow}>
+          {chips.map((c) => (
+            <span key={c} style={{ ...St.reasonChip, borderColor: `${medal.accent}44`, color: medal.accent }}>{c}</span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Lock-beat visual ────────────────────────────────────────────────────────
 function RingPulse({ accent }) {
   return (
     <div style={St.ringOuter}>
@@ -250,13 +376,14 @@ function Keyframes() {
       @keyframes auroUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes auroSpin2 { to { transform: rotate(360deg); } }
       @keyframes auroBreath { 0%,100% { opacity: .5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+      @keyframes auroFloat { 0%,100% { transform: translateX(-50%) scale(1) translateY(0); } 50% { transform: translateX(-50%) scale(1) translateY(-5px); } }
     `}</style>
   );
 }
 
-// ── Styles (Auro idiom) ────────────────────────────────────────────────────────
+// ── Styles (Auro idiom) ──────────────────────────────────────────────────────
 const St = {
-  wrap: { width: "100%", maxWidth: 540, display: "flex", flexDirection: "column", gap: 18 },
+  wrap: { width: "100%", maxWidth: 540, display: "flex", flexDirection: "column", gap: 16 },
 
   lockWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 26, padding: "60px 0" },
   lockLabel: { fontSize: 13, letterSpacing: 3, color: C.dim, textTransform: "uppercase" },
@@ -266,44 +393,59 @@ const St = {
   ringDot: { position: "absolute", top: "50%", left: "50%", width: 10, height: 10, borderRadius: "50%",
     transform: "translate(-50%,-50%)", animation: "auroBreath 1s ease-in-out infinite" },
 
-  card: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 22,
-    padding: "26px 22px", textAlign: "center" },
-  glyph: { fontSize: 30, marginBottom: 8, lineHeight: 1 },
-  kicker: { letterSpacing: 4, fontSize: 11, color: C.dim, fontWeight: 700, marginBottom: 6 },
-  title: { fontSize: 34, fontWeight: 900, margin: "0 0 12px", lineHeight: 1.1,
-    WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent",
-    WebkitTextFillColor: "transparent" },
-  identity: { fontSize: 16.5, fontWeight: 650, color: C.text, margin: "0 0 12px", lineHeight: 1.35 },
-  mirror: { fontSize: 14.5, color: C.dim, lineHeight: 1.55, margin: 0 },
-  chips: { display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginTop: 18 },
+  // Archetype card
+  archCard: { position: "relative", overflow: "hidden", background: C.card,
+    border: `1px solid ${C.border}`, borderRadius: 22, padding: "26px 22px", textAlign: "center" },
+  archGlow: { position: "absolute", inset: 0, pointerEvents: "none" },
+  glyph: { position: "relative", fontSize: 30, marginBottom: 8, lineHeight: 1 },
+  kicker: { position: "relative", letterSpacing: 4, fontSize: 11, color: C.dim, fontWeight: 700, marginBottom: 6 },
+  archTitle: { position: "relative", fontSize: 34, fontWeight: 900, margin: "0 0 12px", lineHeight: 1.1,
+    WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
+  identity: { position: "relative", fontSize: 16.5, fontWeight: 650, color: C.text, margin: "0 0 12px", lineHeight: 1.35 },
+  mirror: { position: "relative", fontSize: 14.5, color: C.dim, lineHeight: 1.55, margin: 0 },
+  chips: { position: "relative", display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginTop: 18 },
   chip: { fontSize: 12, padding: "5px 11px", borderRadius: 999, border: "1px solid",
     color: C.text, background: "rgba(255,255,255,0.03)" },
 
-  pathsHead: { fontSize: 13, color: C.dim, letterSpacing: 1, margin: "10px 2px 2px", fontWeight: 600 },
-  paths: { display: "flex", flexDirection: "column", gap: 12 },
-  // path is now a <button>: reset native styling, full width, left aligned.
-  path: { display: "block", width: "100%", textAlign: "left", font: "inherit",
-    background: C.card, border: `1px solid ${C.border}`, borderRadius: 16, padding: "15px 16px",
-    cursor: "pointer", transition: "border-color .15s ease, box-shadow .15s ease, background .15s ease" },
-  pathTop: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 },
-  pathTopRight: { display: "flex", alignItems: "center", gap: 8 },
-  pathTitle: { fontSize: 16, fontWeight: 750, color: C.text },
-  bestTag: { fontSize: 10.5, fontWeight: 800, letterSpacing: 0.5, padding: "3px 9px", borderRadius: 999 },
-  check: { width: 22, height: 22, borderRadius: "50%", border: "1.5px solid", display: "inline-flex",
-    alignItems: "center", justifyContent: "center", fontSize: 12, fontWeight: 900,
-    transition: "all .15s ease", flex: "0 0 auto" },
-  pathSummary: { fontSize: 13, color: C.dim, lineHeight: 1.45, margin: "6px 0 10px" },
-  pathMeta: { display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 8 },
-  earn: { fontSize: 13, fontWeight: 700, color: C.gold },
-  matchNum: { fontSize: 12, color: C.dim },
-  matchTrack: { height: 4, borderRadius: 4, background: "rgba(255,255,255,0.08)", overflow: "hidden" },
-  matchFill: { height: "100%", borderRadius: 4 },
+  sectionHead: { fontSize: 13, color: C.dim, letterSpacing: 1, margin: "8px 2px 0", fontWeight: 600, textAlign: "center" },
 
+  // Podium stage
+  stage: { position: "relative", width: "100%", height: 226, margin: "2px 0 2px" },
+  podCard: { position: "absolute", top: 12, left: "50%", width: 188, minHeight: 176, boxSizing: "border-box",
+    textAlign: "left", font: "inherit", color: C.text, cursor: "pointer", borderRadius: 20,
+    border: "1px solid", padding: "14px 15px", display: "flex", flexDirection: "column", gap: 9,
+    backdropFilter: "blur(6px)", WebkitBackdropFilter: "blur(6px)",
+    transition: "transform .38s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, opacity .3s ease, border-color .3s ease" },
+  medalRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  medalPill: { fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase",
+    padding: "4px 9px", borderRadius: 999, border: "1px solid" },
+  podCheck: { width: 22, height: 22, borderRadius: "50%", display: "inline-flex", alignItems: "center",
+    justifyContent: "center", fontSize: 12, fontWeight: 900, flex: "0 0 auto" },
+  podName: { fontWeight: 800, color: C.text, lineHeight: 1.22,
+    display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
+  podSummary: { fontSize: 12, color: C.dim, lineHeight: 1.4,
+    display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
+  podHint: { fontSize: 11, color: C.dim, letterSpacing: 0.4, marginTop: "auto", opacity: 0.8 },
+
+  // Path Info
+  infoCard: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: "18px 18px 16px" },
+  infoKicker: { letterSpacing: 3, fontSize: 10.5, color: C.dim, fontWeight: 700, marginBottom: 6 },
+  infoTitle: { fontSize: 22, fontWeight: 850, margin: "0 0 8px", lineHeight: 1.15,
+    WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
+  infoWhy: { fontSize: 14, color: C.text, opacity: 0.85, lineHeight: 1.5, margin: "0 0 14px" },
+  metaRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 },
+  metaPill: { fontSize: 12.5, fontWeight: 700, padding: "6px 11px", borderRadius: 10,
+    background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}` },
+  reasonRow: { display: "flex", flexWrap: "wrap", gap: 7 },
+  reasonChip: { fontSize: 11.5, fontWeight: 600, padding: "5px 10px", borderRadius: 999,
+    border: "1px solid", background: "rgba(255,255,255,0.02)" },
+
+  // CTA
   cta: { width: "100%", padding: "16px 20px", borderRadius: 16, border: "none",
-    fontWeight: 800, fontSize: 16, marginTop: 8, transition: "opacity .15s ease" },
+    fontWeight: 800, fontSize: 16, color: "#0a0b10", cursor: "pointer", marginTop: 6,
+    transition: "filter .15s ease" },
   ctaSub: { fontSize: 12, color: C.dim, textAlign: "center" },
   debugBtn: { width: "100%", marginTop: 6, padding: "9px 12px", borderRadius: 10,
     border: `1px dashed ${C.border}`, background: "transparent", color: C.dim,
-    fontSize: 12, letterSpacing: 0.5, cursor: "pointer",
-    fontFamily: "ui-monospace, Menlo, monospace" },
+    fontSize: 12, letterSpacing: 0.5, cursor: "pointer", fontFamily: "ui-monospace, Menlo, monospace" },
 };
