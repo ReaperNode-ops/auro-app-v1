@@ -275,12 +275,15 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
 
 // ── Podium: 3 cards, selected centered + in front; tap OR swipe to choose ────
 const SWIPE_THRESHOLD = 45; // px of horizontal travel before it counts as a swipe
+const WHEEL_THRESHOLD = 35; // px of horizontal wheel delta before it counts
+const WHEEL_COOLDOWN_MS = 350; // min gap between wheel-driven card changes
 
 function Podium({ top3, selectedIndex, onSelect }) {
   // Refs survive re-renders without causing them; used to track the active drag
   // and to swallow the synthetic click that follows a swipe.
   const drag = useRef({ x: 0, y: 0, active: false });
   const suppressClick = useRef(false);
+  const lastWheel = useRef(0); // timestamp of the last wheel-driven card change
 
   if (!top3.length) return null;
   const count = top3.length;
@@ -310,6 +313,18 @@ function Podium({ top3, selectedIndex, onSelect }) {
     drag.current.active = false;
   }
 
+  // Trackpad two-finger horizontal swipe arrives as a wheel event with a
+  // dominant deltaX. Throttle so one physical swipe advances a single card.
+  function onWheel(e) {
+    if (Math.abs(e.deltaX) >= WHEEL_THRESHOLD && Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
+      const now = Date.now();
+      if (now - lastWheel.current < WHEEL_COOLDOWN_MS) return;
+      lastWheel.current = now;
+      // scroll left (positive deltaX) → next, scroll right → previous
+      onSelect(clamp(selectedIndex + (e.deltaX > 0 ? 1 : -1)));
+    }
+  }
+
   // Tap handler shared by the cards: ignored once if it trails a swipe.
   function selectCard(i) {
     if (suppressClick.current) { suppressClick.current = false; return; }
@@ -322,6 +337,7 @@ function Podium({ top3, selectedIndex, onSelect }) {
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onPointerCancel={onPointerCancel}
+      onWheel={onWheel}
     >
       {top3.map((path, i) => (
         <PodiumCard
