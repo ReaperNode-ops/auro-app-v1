@@ -181,7 +181,9 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   const [stage, setStage] = useState("lock"); // 'lock' → 'revealed'
   const [lockLabel, setLockLabel] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0); // default = top pick
+  const [settledIndex, setSettledIndex] = useState(0); // debounced — drives PathInfo re-entry only
   const [copied, setCopied] = useState(false); // debug-report copy feedback (temporary)
+  const settleTimer = useRef(null);
 
   // cycle the lock labels, then settle into the reveal
   useEffect(() => {
@@ -189,6 +191,15 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
     const done = setTimeout(() => setStage("revealed"), LOCK_MS);
     return () => { clearInterval(labels); clearTimeout(done); };
   }, []);
+
+  // Debounce the Path Detail re-animation: its CONTENT follows selection live
+  // (below), but the entrance animation only replays ~140ms after scrolling
+  // settles, so it doesn't re-trigger on every card crossed mid-scroll.
+  useEffect(() => {
+    if (settleTimer.current) clearTimeout(settleTimer.current);
+    settleTimer.current = setTimeout(() => setSettledIndex(selectedIndex), 140);
+    return () => { if (settleTimer.current) clearTimeout(settleTimer.current); };
+  }, [selectedIndex]);
 
   const key = archetype && archetype.key ? archetype.key : "specialist";
   const copy = ARCHETYPES[key] || ARCHETYPES.specialist;
@@ -279,7 +290,7 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
       <Podium top3={top3} selectedIndex={safeIndex} onSelect={setSelectedIndex} />
 
       {/* 4: Path Info — keyed so it lightly re-animates when the selection changes */}
-      {selectedPath && <PathInfo key={selectedPath.id} path={selectedPath} medal={MEDAL[safeIndex]} />}
+      {selectedPath && <PathInfo key={Math.min(settledIndex, Math.max(0, top3.length - 1))} path={selectedPath} medal={MEDAL[safeIndex]} />}
 
       {/* 5: CTA */}
       {selectedPath && (
@@ -356,7 +367,7 @@ function Podium({ top3, selectedIndex, onSelect }) {
     if (el && el.scrollIntoView) {
       programmatic.current = true;
       el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-      setTimeout(() => { programmatic.current = false; }, 400);
+      setTimeout(() => { programmatic.current = false; }, 320);
     }
   }
 
@@ -393,12 +404,11 @@ function Podium({ top3, selectedIndex, onSelect }) {
 }
 
 // Soft embossed rank medallion — the quiet identity mark of a collectible card.
-function Medallion({ medal, selected }) {
+function Medallion({ medal }) {
   return (
     <span
       style={{
         ...St.medallion,
-        width: selected ? 30 : 26, height: selected ? 30 : 26,
         color: medal.accent,
         background: `radial-gradient(120% 120% at 30% 20%, ${medal.accent}2e, rgba(0,0,0,0.28))`,
         boxShadow: `inset 0 1px 0 ${medal.accent}66, inset 0 0 0 1px ${medal.accent}33, 0 3px 8px rgba(0,0,0,0.4)`,
@@ -410,17 +420,18 @@ function Medallion({ medal, selected }) {
 }
 
 function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
-  // Transform applied to the BUTTON only (wrapper stays untransformed so the
-  // scroll-snap centring math is unaffected). The selected card is a wide hero;
-  // the others stay solid but sit smaller, lower, tilted and behind it. Depth
-  // comes from scale / translate / rotate / shadow / z-index — NOT transparency.
+  // SMOOTHNESS: every card keeps an IDENTICAL layout box (width / min-height /
+  // padding / radius / border are constant). The hero vs side difference is
+  // expressed only through GPU-friendly transform / opacity / shadow / colour,
+  // so nothing reflows the scroll track while scrolling. The box is sized for
+  // the hero's content at all times, so showing the summary causes no shift.
   const ax = Math.min(Math.abs(offset), 2);   // distance from selected (0,1,2)
   const dir = offset < 0 ? 1 : -1;            // left cards shift right; right cards shift left
-  const scale = selected ? 1 : ax === 1 ? 0.85 : 0.81;
-  const tx = selected ? 0 : dir * (ax === 1 ? 16 : 30); // lighter tuck → side cards peek more
-  const ty = selected ? 0 : 18 + ax * 8;                // sit lower → podium silhouette
-  const ry = selected ? 0 : dir * (ax === 1 ? 16 : 22); // gentler tilt → side titles stay readable
-  const op = selected ? 1 : ax === 1 ? 0.98 : 0.94;     // stay solid, never ghosted
+  const scale = selected ? 1.05 : ax === 1 ? 0.84 : 0.8; // hierarchy via scale, not width
+  const tx = selected ? 0 : dir * (ax === 1 ? 14 : 28);
+  const ty = selected ? 0 : 16 + ax * 8;
+  const ry = selected ? 0 : dir * (ax === 1 ? 16 : 22);
+  const op = selected ? 1 : ax === 1 ? 0.97 : 0.93;
 
   return (
     <button
@@ -429,15 +440,9 @@ function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
       aria-pressed={selected}
       style={{
         ...St.podCard,
-        width: selected ? 252 : 208,
-        minHeight: selected ? 224 : 166,
-        padding: selected ? "18px 20px 20px" : "15px 16px 16px",
-        gap: selected ? 11 : 8,
-        // soft, slightly asymmetric geometry — rounded, never sharp
-        borderRadius: selected ? "22px 22px 20px 18px" : "18px 18px 16px 15px",
-        transform: `translateX(${tx}px) translateY(${ty}px) scale(${scale}) rotateY(${ry}deg)`,
+        transform: `translate3d(${tx}px, ${ty}px, 0) scale(${scale}) rotateY(${ry}deg)`,
         opacity: op,
-        border: `1px solid ${selected ? `${medal.accent}88` : `${medal.accent}44`}`,
+        borderColor: selected ? `${medal.accent}88` : `${medal.accent}44`,
         background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
           ? `0 30px 70px rgba(0,0,0,0.55), 0 0 50px ${medal.glow}, inset 0 1px 0 ${medal.accent}55, inset 0 -30px 50px rgba(0,0,0,0.42)`
@@ -452,24 +457,21 @@ function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
       {selected && <span aria-hidden style={St.cardSweep} />}
 
       <div style={St.cardHead}>
-        <Medallion medal={medal} selected={selected} />
+        <Medallion medal={medal} />
         <span style={{ ...St.medalLabel, color: `${medal.accent}d8` }}>{medal.label}</span>
       </div>
 
-      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 20 : 14.5, WebkitLineClamp: selected ? 2 : 3 }}>
-        {path.title}
-      </div>
+      <div style={{ ...St.podName, color: medal.title }}>{path.title}</div>
 
-      {selected && (
-        <>
-          {path.summary && <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>}
-          {path.earnings && (
-            <div style={St.cardMetaRow}>
-              <span style={{ ...St.cardMetaLabel, color: `${medal.accent}b0` }}>Est. earnings</span>
-              <span style={{ ...St.cardMetaVal, color: medal.title }}>{path.earnings}</span>
-            </div>
-          )}
-        </>
+      {/* content is conditional but the box height is fixed, so no track shift */}
+      {selected && path.summary && (
+        <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>
+      )}
+      {selected && path.earnings && (
+        <div style={St.cardMetaRow}>
+          <span style={{ ...St.cardMetaLabel, color: `${medal.accent}b0` }}>Est. earnings</span>
+          <span style={{ ...St.cardMetaVal, color: medal.title }}>{path.earnings}</span>
+        </div>
       )}
     </button>
   );
@@ -605,11 +607,13 @@ const St = {
     scrollbarWidth: "none", msOverflowStyle: "none" },
   snapItem: { flex: "0 0 188px", height: "100%", display: "flex", alignItems: "center",
     justifyContent: "center", scrollSnapAlign: "center", margin: "0 -18px" },
-  podCard: { position: "relative", width: 200, boxSizing: "border-box", overflow: "hidden",
+  podCard: { position: "relative", width: 230, minHeight: 224, boxSizing: "border-box", overflow: "hidden",
+    padding: "18px 20px 20px", borderRadius: "22px 22px 20px 18px", border: "1px solid",
     textAlign: "left", font: "inherit", color: C.text, cursor: "pointer",
-    display: "flex", flexDirection: "column", gap: 8,
-    transformOrigin: "center", backfaceVisibility: "hidden",
-    transition: "transform .4s cubic-bezier(.22,.68,.2,1), box-shadow .35s ease, opacity .35s ease, border-color .35s ease, width .35s ease, min-height .35s ease, padding .35s ease" },
+    display: "flex", flexDirection: "column", gap: 10,
+    transformOrigin: "center", backfaceVisibility: "hidden", willChange: "transform",
+    // only GPU-friendly props transition — NEVER width/height/padding (layout)
+    transition: "transform .42s cubic-bezier(.22,.68,.2,1), box-shadow .35s ease, opacity .35s ease, border-color .35s ease" },
   // soft overlays (one gloss + a gentle sweep on the hero)
   cardGloss: { position: "absolute", top: 0, left: 0, right: 0, height: "52%", zIndex: 1, pointerEvents: "none",
     borderRadius: "inherit",
@@ -619,14 +623,14 @@ const St = {
     animation: "auroCardSweep 7s ease-in-out infinite" },
   // card content
   cardHead: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 9 },
-  medallion: { flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center",
-    borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: 0.3 },
+  medallion: { flex: "0 0 auto", width: 28, height: 28, display: "inline-flex", alignItems: "center",
+    justifyContent: "center", borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: 0.3 },
   medalLabel: { fontSize: 11.5, fontWeight: 750, letterSpacing: 0.2 },
   cardMetaRow: { position: "relative", zIndex: 2, display: "flex", flexDirection: "column", gap: 1, marginTop: "auto", paddingTop: 6 },
   cardMetaLabel: { fontSize: 10.5, fontWeight: 600, letterSpacing: 0.2 },
   cardMetaVal: { fontSize: 15, fontWeight: 800, letterSpacing: -0.2 },
-  podName: { position: "relative", zIndex: 2, fontWeight: 800, color: C.text, lineHeight: 1.22, letterSpacing: -0.2,
-    display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
+  podName: { position: "relative", zIndex: 2, fontSize: 16.5, fontWeight: 800, color: C.text, lineHeight: 1.24, letterSpacing: -0.2,
+    display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" },
   podSummary: { position: "relative", zIndex: 2, fontSize: 13, lineHeight: 1.46,
     display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
 
