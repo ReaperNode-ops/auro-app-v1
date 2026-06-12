@@ -163,18 +163,71 @@ function reasonChips(path) {
 }
 
 // One short, human sentence on why this path fits.
+// Per-path rationale. Specific copy for common starter paths first, then varied
+// metadata-driven templates so each path reads differently. 1-2 sentences,
+// direct and practical — no raw reason codes, no wellness/corporate tone.
+const WHY_BY_ID = {
+  "online-tutor": "This turns what you already know into paid help. It's people-facing, easy to explain, and you can start with one subject and one student.",
+  "tutoring-younger": "A strong starter if you're comfortable helping people directly. You can begin with younger students, simple subjects, and local or online sessions.",
+  "homework-helper": "This fits if you're better at keeping people on track than performing for an audience. It's practical, structured, and easier to start than building a brand.",
+  "study-coach": "This fits if you're better at keeping people on track than performing for an audience. It's practical, structured, and easier to start than building a brand.",
+  "car-washing": "This is a fast local cash path. The offer is simple, people understand it instantly, and you can start with neighbors before building a bigger route.",
+  "lawn-care": "Straightforward local money. People always need it, the pitch is obvious, and you can start on your own street.",
+  "snow-removal": "Seasonal local cash that's easy to sell. When it snows the demand is instant and the offer explains itself.",
+  "babysitting": "A trusted, people-facing starter. It pays from day one and runs on reliability more than any special skill.",
+  "pet-sitting": "An easy, trust-based starter. The work is simple, repeat clients come fast, and you can begin right in your area.",
+  "house-cleaning": "A dependable local cash path. The offer is clear, repeat clients add up fast, and you can start solo.",
+  "errand-runner": "Simple, practical, and fast to start. People pay for time, so the pitch is easy and you can begin locally today.",
+  "sneaker-flipping": "This fits if you like spotting demand and moving quickly. The edge comes from research, timing, and buying smart, not from needing a huge audience.",
+  "reseller": "This rewards a sharp eye and quick moves. You earn on the spread, so it's about sourcing smart rather than building a following.",
+  "furniture-flipping": "This fits if you like hands-on work and a good deal. The margin comes from finding undervalued pieces and making them look worth more.",
+  "phone-flipping": "This works if you like fixing and reselling. The margin comes from buying low and knowing what's actually worth flipping.",
+  "content-clipper": "This fits if you can spot the best moments in long videos. It's behind-the-scenes editing you can start with a single creator.",
+  "short-form-editor": "Editing is in demand and you never need to be on camera. Start by cutting clips for one creator and grow from there.",
+  "video-editor": "Skilled, behind-the-scenes work that pays well. A few strong sample edits get you hired faster than any resume.",
+  "thumbnail-designer": "Creators always need thumbnails that get clicks. It's quick to start, sample-driven, and you never show your face.",
+  "canva-designer": "Simple design work businesses actually pay for. You can start with a few templates and a couple of sample pieces.",
+  "logo-social-designer": "Small brands need clean visuals constantly. Build a tiny portfolio and you can start taking paid requests quickly.",
+  "caption-writer": "If you're good with words, creators will pay you to write hooks and captions. Low setup, and fast to prove.",
+  "social-media-helper": "Businesses want someone to run their posts. It's practical, behind-the-scenes, and you can start with one local client.",
+  "community-moderator": "This fits if you're reliable and good with people online. It's steady, low-pressure, and you can start with one server or community.",
+  "data-entry": "A low-friction remote starter. It's not glamorous, but it's steady, easy to begin, and pays while you build other skills.",
+  "virtual-assistant": "This fits if you're organized and reliable. You handle the busywork others don't want, and you can start with one client.",
+  "customer-support": "Steady remote work that rewards being calm and clear. It's easy to start and a solid base while you build other skills.",
+  "resume-helper": "If you can make people sound their best on paper, this is quick to start and easy to explain.",
+  "spreadsheet-service": "If you're good with numbers and structure, small businesses will pay for clean spreadsheets. Practical, remote, and quick to prove.",
+  "cold-email-setter": "This fits if you don't mind reaching out. The money comes from booking meetings, so it's about consistency more than credentials.",
+  "local-lead-gen": "This rewards hustle over a big audience. You connect local businesses with customers and get paid for the results you bring.",
+  "game-coaching": "If you're genuinely good at a game, people will pay to improve. Start one on one and let word of mouth grow it.",
+  "seo-blog": "This is a longer build. It fits if you want an asset that compounds over time, but it'll need patience before the money feels real.",
+  "digital-products": "Make it once, sell it many times. It takes upfront work, but each sale after that is mostly profit.",
+  "etsy-digital": "Make it once, sell it many times. There's upfront work, but every sale after that is mostly profit.",
+  "affiliate-shortform": "This rewards consistent posting. Early money is small, but it can compound if you keep showing up.",
+};
+
 function whyCopy(path) {
-  const r = path.v2Reasons || [];
-  const strength =
-    r.includes("domain:top") ? "plays to your strongest area"
-    : r.includes("domain:second") ? "lines up with your interests"
-    : (r.includes("remote-skill") || r.some((x) => x.startsWith("ct:"))) ? "matches the kind of work you want to do"
-    : "fits the profile you just built";
-  const ramp =
-    path.readiness === "start-now" ? "You can start right now."
-    : path.readiness === "learn-first" ? "A short ramp, then you're earning."
-    : "It's a longer build, but the upside is real.";
-  return `This one ${strength}. ${ramp}`;
+  if (path && WHY_BY_ID[path.id]) return WHY_BY_ID[path.id];
+
+  // Varied metadata fallbacks — ordered by the most defining trait.
+  if (path.requiresLocalAccess && path.quickCash)
+    return "This is a fast local cash path. The offer is simple, people understand it right away, and you can start close to home.";
+  if (path.quickCash)
+    return "This is a quick-cash option you can act on now without much setup or experience.";
+  if (path.requiresCamera || path.requiresAudience)
+    return "This rewards showing up consistently. The audience builds slowly at first, then the work starts paying off.";
+  if (path.requiresSelling === "high")
+    return "This fits if you're comfortable reaching out to people. The money comes from outreach and follow-up, not from a fancy background.";
+  if (path.requiresPortfolio)
+    return "This is skill work where a few good samples open the door. You build proof as you go and start taking paid work early.";
+  if (path.readiness === "build-over-time" || path.tier === "long-term")
+    return "This is a longer build. It fits if you want something that compounds over time, but expect patience before the money feels real.";
+  if (path.requiresExperience === "strong")
+    return "This leans on real skill, so it pays more but expects you to know your craft going in.";
+  if (path.studentFriendly)
+    return "A practical starter that works around a student schedule. It's easy to explain and quick to begin.";
+  if (path.readiness === "start-now")
+    return "A practical starter you can begin right now and learn by doing, with no audience or big budget required.";
+  return "This is a solid, practical match for where you are now. It's straightforward to start and easy to explain to a first client.";
 }
 
 export default function Reveal({ derived, archetype, legacyAnswers, onContinue, history }) {
@@ -427,10 +480,10 @@ function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
   // the hero's content at all times, so showing the summary causes no shift.
   const ax = Math.min(Math.abs(offset), 2);   // distance from selected (0,1,2)
   const dir = offset < 0 ? 1 : -1;            // left cards shift right; right cards shift left
-  const scale = selected ? 1.05 : ax === 1 ? 0.84 : 0.8; // hierarchy via scale, not width
-  const tx = selected ? 0 : dir * (ax === 1 ? 14 : 28);
-  const ty = selected ? 0 : 16 + ax * 8;
-  const ry = selected ? 0 : dir * (ax === 1 ? 16 : 22);
+  const scale = selected ? 1.05 : ax === 1 ? 0.86 : 0.82; // hierarchy via scale, not width
+  const tx = selected ? 0 : dir * (ax === 1 ? 8 : 18);
+  const ty = selected ? 0 : 14 + ax * 7;
+  const ry = selected ? 0 : dir * (ax === 1 ? 14 : 20);
   const op = selected ? 1 : ax === 1 ? 0.97 : 0.93;
 
   return (
@@ -445,8 +498,8 @@ function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
         borderColor: selected ? `${medal.accent}88` : `${medal.accent}44`,
         background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
-          ? `0 30px 70px rgba(0,0,0,0.55), 0 0 50px ${medal.glow}, inset 0 1px 0 ${medal.accent}55, inset 0 -30px 50px rgba(0,0,0,0.42)`
-          : `0 18px 34px rgba(0,0,0,0.5), inset 0 1px 0 ${medal.accent}2a, inset 0 -20px 36px rgba(0,0,0,0.45)`,
+          ? `0 22px 52px rgba(0,0,0,0.5), 0 0 44px ${medal.glow}, inset 0 1px 0 ${medal.accent}55, inset 0 -28px 46px rgba(0,0,0,0.4)`
+          : `0 14px 28px rgba(0,0,0,0.48), inset 0 1px 0 ${medal.accent}2a, inset 0 -18px 32px rgba(0,0,0,0.42)`,
         ...(selected
           ? { "--glow": medal.glow, "--ring": `${medal.accent}55`, animation: "auroGlow 4.2s ease-in-out infinite" }
           : null),
@@ -501,9 +554,9 @@ function PathInfo({ path, medal }) {
       </h2>
       <p style={St.infoWhy}>{whyCopy(path)}</p>
 
-      <div style={St.metaRow}>
+      <div style={St.metaGrid}>
         {meta.map((m, i) => (
-          <div key={i} style={{ ...St.metaItem, borderLeft: i === 0 ? "none" : `1px solid ${C.border}` }}>
+          <div key={i} style={St.metaItem}>
             <span style={St.metaKey}>{m.k}</span>
             <span style={{ ...St.metaVal, color: m.accent ? medal.title : C.text }}>{m.v}</span>
           </div>
@@ -600,13 +653,16 @@ const St = {
       "radial-gradient(70% 50% at 50% 6%, rgba(120,150,210,0.06), transparent 62%)," +
       "radial-gradient(120% 90% at 50% 54%, transparent 58%, rgba(0,0,0,0.34) 100%)" },
   scroller: { position: "relative", zIndex: 1, display: "flex", flexDirection: "row", flexWrap: "nowrap",
-    alignItems: "center", justifyContent: "flex-start", height: 330, width: "100%",
+    alignItems: "center", justifyContent: "flex-start", height: 322, width: "100%",
     overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory",
     WebkitOverflowScrolling: "touch", perspective: "1200px",
-    padding: "0 calc(50% - 94px)",
+    padding: "0 calc(50% - 100px)",
+    // soft fade at the edges → side cards taper off intentionally instead of hard-clipping
+    maskImage: "linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%)",
+    WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%)",
     scrollbarWidth: "none", msOverflowStyle: "none" },
-  snapItem: { flex: "0 0 188px", height: "100%", display: "flex", alignItems: "center",
-    justifyContent: "center", scrollSnapAlign: "center", margin: "0 -18px" },
+  snapItem: { flex: "0 0 200px", height: "100%", display: "flex", alignItems: "center",
+    justifyContent: "center", scrollSnapAlign: "center", margin: "0 -8px" }, // lighter overlap → more of each side card shows
   podCard: { position: "relative", width: 230, minHeight: 224, boxSizing: "border-box", overflow: "hidden",
     padding: "18px 20px 20px", borderRadius: "22px 22px 20px 18px", border: "1px solid",
     textAlign: "left", font: "inherit", color: C.text, cursor: "pointer",
@@ -648,8 +704,10 @@ const St = {
   infoTitle: { position: "relative", zIndex: 2, fontSize: 23, fontWeight: 850, margin: "0 0 9px", lineHeight: 1.12, letterSpacing: -0.4,
     WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
   infoWhy: { position: "relative", zIndex: 2, fontSize: 14.5, color: C.text, opacity: 0.88, lineHeight: 1.52, margin: "0 0 16px" },
-  metaRow: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 0, marginBottom: 16 },
-  metaItem: { display: "flex", flexDirection: "column", gap: 3, padding: "2px 14px 2px 14px", minWidth: 70 },
+  metaGrid: { position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr",
+    columnGap: 10, rowGap: 10, marginBottom: 16 },
+  metaItem: { display: "flex", flexDirection: "column", gap: 3, padding: "9px 12px", borderRadius: 12,
+    background: "rgba(255,255,255,0.035)", border: `1px solid ${C.border}` },
   metaKey: { fontSize: 11, fontWeight: 600, color: C.dim, letterSpacing: 0.2 },
   metaVal: { fontSize: 15, fontWeight: 800, letterSpacing: -0.2 },
   sysLabel: { position: "relative", zIndex: 2, fontSize: 11.5, fontWeight: 700, color: "rgba(245,246,250,0.6)",
