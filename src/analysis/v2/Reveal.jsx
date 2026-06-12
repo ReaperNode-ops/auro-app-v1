@@ -44,51 +44,45 @@ const C = {
 const LOCK_MS = 950; // the single earned pause before the archetype lands
 
 // Medal treatment by RANK (0 = top pick). Position is decided by selection.
-// Each medal is a physical brushed-metal card: multi-layer backgrounds (top
-// light source, diagonal brushed streaks, lower vignette, base metal) plus its
-// own text/accent hues. `serial` is the etched HUD code shown on the card.
+// Each medal is a soft brushed-metal collectible card: warm layered surfaces
+// (gentle top sheen, soft brushed grain, warm depth) plus its own accent/text
+// hues. `idx` is a quiet index numeral (not a HUD serial).
 const MEDAL = [
   {
-    label: "Top pick", serial: "PATH-01", accent: "#f5c842", accent2: "#ffe9a3", glow: "rgba(245,200,66,0.42)",
+    label: "Top pick", idx: "01", accent: "#f5c842", accent2: "#ffe9a3", glow: "rgba(245,200,66,0.34)",
     cardSel:
-      "radial-gradient(135% 78% at 50% -14%, rgba(255,238,190,0.20), transparent 56%)," +
-      "repeating-linear-gradient(118deg, rgba(255,226,150,0.055) 0 1px, transparent 1px 5px)," +
-      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.62), transparent 54%)," +
-      "linear-gradient(157deg, #5c4918 0%, #352810 47%, #181106 100%)",
+      "radial-gradient(140% 70% at 50% -8%, rgba(255,236,188,0.20), transparent 60%)," +
+      "radial-gradient(120% 120% at 50% 120%, rgba(10,7,2,0.5), transparent 60%)," +
+      "linear-gradient(162deg, #5a4a22 0%, #3a2c13 46%, #221809 100%)",
     cardIdle:
-      "radial-gradient(135% 78% at 50% -14%, rgba(255,238,190,0.10), transparent 56%)," +
-      "repeating-linear-gradient(118deg, rgba(255,226,150,0.04) 0 1px, transparent 1px 5px)," +
-      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.70), transparent 52%)," +
-      "linear-gradient(157deg, #40310f 0%, #251b0a 50%, #110c05 100%)",
-    title: "#ffe6a0", body: "rgba(255,242,212,0.82)",
+      "radial-gradient(140% 70% at 50% -8%, rgba(255,236,188,0.12), transparent 60%)," +
+      "radial-gradient(120% 120% at 50% 120%, rgba(8,6,2,0.58), transparent 58%)," +
+      "linear-gradient(162deg, #463819 0%, #2c2010 50%, #18110699 100%)",
+    title: "#ffe7a6", body: "rgba(255,243,216,0.85)",
   },
   {
-    label: "2nd pick", serial: "PATH-02", accent: "#c9d4e4", accent2: "#eef3fa", glow: "rgba(201,212,228,0.40)",
+    label: "2nd pick", idx: "02", accent: "#bcd0e6", accent2: "#eef4fb", glow: "rgba(188,208,230,0.32)",
     cardSel:
-      "radial-gradient(135% 78% at 50% -14%, rgba(228,238,252,0.18), transparent 56%)," +
-      "repeating-linear-gradient(118deg, rgba(220,232,248,0.05) 0 1px, transparent 1px 5px)," +
-      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.6), transparent 54%)," +
-      "linear-gradient(157deg, #3d4450 0%, #232830 47%, #11141a 100%)",
+      "radial-gradient(140% 70% at 50% -8%, rgba(226,238,252,0.18), transparent 60%)," +
+      "radial-gradient(120% 120% at 50% 120%, rgba(4,7,10,0.5), transparent 60%)," +
+      "linear-gradient(162deg, #424b59 0%, #2a313b 46%, #181d24 100%)",
     cardIdle:
-      "radial-gradient(135% 78% at 50% -14%, rgba(228,238,252,0.09), transparent 56%)," +
-      "repeating-linear-gradient(118deg, rgba(220,232,248,0.038) 0 1px, transparent 1px 5px)," +
-      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.68), transparent 52%)," +
-      "linear-gradient(157deg, #2c323b 0%, #191d23 50%, #0e1014 100%)",
-    title: "#eaf1fb", body: "rgba(228,236,246,0.82)",
+      "radial-gradient(140% 70% at 50% -8%, rgba(226,238,252,0.11), transparent 60%)," +
+      "radial-gradient(120% 120% at 50% 120%, rgba(3,6,9,0.58), transparent 58%)," +
+      "linear-gradient(162deg, #343c47 0%, #20262e 50%, #12161b99 100%)",
+    title: "#eef4fb", body: "rgba(231,239,248,0.85)",
   },
   {
-    label: "3rd pick", serial: "PATH-03", accent: "#d08a58", accent2: "#ecb98c", glow: "rgba(208,138,88,0.40)",
+    label: "3rd pick", idx: "03", accent: "#d99a6c", accent2: "#f0c39a", glow: "rgba(217,154,108,0.32)",
     cardSel:
-      "radial-gradient(135% 78% at 50% -14%, rgba(255,206,166,0.18), transparent 56%)," +
-      "repeating-linear-gradient(118deg, rgba(240,190,150,0.05) 0 1px, transparent 1px 5px)," +
-      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.62), transparent 54%)," +
-      "linear-gradient(157deg, #5c3d26 0%, #351f12 47%, #19100a 100%)",
+      "radial-gradient(140% 70% at 50% -8%, rgba(255,210,172,0.18), transparent 60%)," +
+      "radial-gradient(120% 120% at 50% 120%, rgba(10,5,2,0.5), transparent 60%)," +
+      "linear-gradient(162deg, #5c4330 0%, #3a281b 46%, #21140c 100%)",
     cardIdle:
-      "radial-gradient(135% 78% at 50% -14%, rgba(255,206,166,0.09), transparent 56%)," +
-      "repeating-linear-gradient(118deg, rgba(240,190,150,0.038) 0 1px, transparent 1px 5px)," +
-      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.70), transparent 52%)," +
-      "linear-gradient(157deg, #42291a 0%, #24160d 50%, #130b06 100%)",
-    title: "#f3cba4", body: "rgba(242,212,186,0.82)",
+      "radial-gradient(140% 70% at 50% -8%, rgba(255,210,172,0.11), transparent 60%)," +
+      "radial-gradient(120% 120% at 50% 120%, rgba(8,4,2,0.58), transparent 58%)," +
+      "linear-gradient(162deg, #483425 0%, #2c1e14 50%, #1a0f0899 100%)",
+    title: "#f4cda8", body: "rgba(244,216,192,0.85)",
   },
 ];
 
@@ -251,23 +245,26 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
       <Keyframes />
 
       {/* 2: Archetype Info card */}
-      <div style={{ ...St.archCard, animation: "auroUp .5s ease both", boxShadow: `inset 0 1px 0 ${sty.accent}33, inset 0 0 0 1px rgba(255,255,255,0.03), 0 16px 34px rgba(0,0,0,0.4)` }}>
-        <div style={{ ...St.archGlow, background: `radial-gradient(120% 80% at 50% 0%, ${sty.accent}22, transparent 70%)` }} />
-        <span aria-hidden style={St.scanlines} />
-        <span aria-hidden style={{ ...St.topEdge, left: 14, right: 14, background: `linear-gradient(90deg, transparent, ${sty.accent}aa 30%, ${sty.accent2} 50%, ${sty.accent}aa 70%, transparent)` }} />
-        <Corners color={sty.accent} alpha="66" />
-
-        <div style={{ ...St.glyph, color: sty.accent }}>{sty.glyph}</div>
-        <div style={{ ...St.kicker, color: `${sty.accent}cc` }}>◢ PROFILE LOCKED</div>
-        <h1 style={{ ...St.archTitle, backgroundImage: `linear-gradient(135deg, ${sty.accent2}, ${sty.accent})` }}>
-          {copy.title}
-        </h1>
+      <div style={{ ...St.archCard, animation: "auroUp .5s ease both" }}>
+        <div aria-hidden style={{ ...St.archTexture, background: `radial-gradient(80% 120% at 88% -10%, ${sty.accent}1f, transparent 58%), radial-gradient(60% 100% at 0% 110%, ${sty.accent}12, transparent 60%)` }} />
+        <div style={St.archTopRow}>
+          <div style={{ ...St.archMedallion, color: sty.accent, boxShadow: `inset 0 1px 0 ${sty.accent}55, inset 0 0 0 1px ${sty.accent}33, 0 6px 16px rgba(0,0,0,0.4)` }}>
+            {sty.glyph}
+          </div>
+          <div style={St.archTopText}>
+            <div style={{ ...St.archKicker, color: `${sty.accent}cc` }}>YOUR ARCHETYPE</div>
+            <h1 style={{ ...St.archTitle, backgroundImage: `linear-gradient(116deg, ${sty.accent2}, ${sty.accent})` }}>
+              {copy.title}
+            </h1>
+          </div>
+        </div>
         <p style={St.identity}>{copy.identity}</p>
+        <span aria-hidden style={{ ...St.archHair, background: `linear-gradient(90deg, ${sty.accent}40, transparent 80%)` }} />
         <p style={St.mirror}>{copy.mirror}</p>
         {chips.length > 0 && (
           <div style={St.chips}>
             {chips.map((c) => (
-              <span key={c} style={{ ...St.chip, borderColor: `${sty.accent}55`, color: `${sty.accent}` }}>{c}</span>
+              <span key={c} style={{ ...St.chip, borderColor: `${sty.accent}3a`, color: sty.accent, background: `${sty.accent}12` }}>{c}</span>
             ))}
           </div>
         )}
@@ -395,17 +392,20 @@ function Podium({ top3, selectedIndex, onSelect }) {
   );
 }
 
-// Four etched corner brackets — the HUD frame of a metal access card.
-function Corners({ color, alpha }) {
-  const a = `${color}${alpha}`;
-  const base = { position: "absolute", width: 12, height: 12, pointerEvents: "none", zIndex: 3 };
+// Soft embossed rank medallion — the quiet identity mark of a collectible card.
+function Medallion({ medal, selected }) {
   return (
-    <>
-      <span aria-hidden style={{ ...base, top: 8, left: 8, borderTop: `1.5px solid ${a}`, borderLeft: `1.5px solid ${a}` }} />
-      <span aria-hidden style={{ ...base, top: 8, right: 8, borderTop: `1.5px solid ${a}`, borderRight: `1.5px solid ${a}` }} />
-      <span aria-hidden style={{ ...base, bottom: 8, left: 8, borderBottom: `1.5px solid ${a}`, borderLeft: `1.5px solid ${a}` }} />
-      <span aria-hidden style={{ ...base, bottom: 8, right: 8, borderBottom: `1.5px solid ${a}`, borderRight: `1.5px solid ${a}` }} />
-    </>
+    <span
+      style={{
+        ...St.medallion,
+        width: selected ? 30 : 26, height: selected ? 30 : 26,
+        color: medal.accent,
+        background: `radial-gradient(120% 120% at 30% 20%, ${medal.accent}2e, rgba(0,0,0,0.28))`,
+        boxShadow: `inset 0 1px 0 ${medal.accent}66, inset 0 0 0 1px ${medal.accent}33, 0 3px 8px rgba(0,0,0,0.4)`,
+      }}
+    >
+      {medal.idx}
+    </span>
   );
 }
 
@@ -431,48 +431,41 @@ function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
         ...St.podCard,
         width: selected ? 252 : 208,
         minHeight: selected ? 224 : 166,
-        padding: selected ? "19px 20px 20px" : "14px 15px 15px",
-        gap: selected ? 10 : 8,
-        borderRadius: selected ? "16px 16px 16px 6px" : "13px 13px 13px 5px",
+        padding: selected ? "18px 20px 20px" : "15px 16px 16px",
+        gap: selected ? 11 : 8,
+        // soft, slightly asymmetric geometry — rounded, never sharp
+        borderRadius: selected ? "22px 22px 20px 18px" : "18px 18px 16px 15px",
         transform: `translateX(${tx}px) translateY(${ty}px) scale(${scale}) rotateY(${ry}deg)`,
         opacity: op,
-        borderWidth: selected ? 1.5 : 1,
-        borderColor: selected ? medal.accent : `${medal.accent}77`,
+        border: `1px solid ${selected ? `${medal.accent}88` : `${medal.accent}44`}`,
         background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
-          ? `0 26px 64px rgba(0,0,0,0.62), 0 0 46px ${medal.glow}, inset 0 1px 0 ${medal.accent}66, inset 0 0 0 1px ${medal.accent}55, inset 0 -22px 40px rgba(0,0,0,0.5)`
-          : `0 16px 30px rgba(0,0,0,0.64), inset 0 1px 0 ${medal.accent}33, inset 0 0 0 1px ${medal.accent}33, inset 0 -16px 30px rgba(0,0,0,0.55)`,
+          ? `0 30px 70px rgba(0,0,0,0.55), 0 0 50px ${medal.glow}, inset 0 1px 0 ${medal.accent}55, inset 0 -30px 50px rgba(0,0,0,0.42)`
+          : `0 18px 34px rgba(0,0,0,0.5), inset 0 1px 0 ${medal.accent}2a, inset 0 -20px 36px rgba(0,0,0,0.45)`,
         ...(selected
-          ? { "--glow": medal.glow, "--ring": `${medal.accent}88`, animation: "auroGlow 3.6s ease-in-out infinite" }
+          ? { "--glow": medal.glow, "--ring": `${medal.accent}55`, animation: "auroGlow 4.2s ease-in-out infinite" }
           : null),
       }}
     >
-      {/* material overlays */}
-      <span aria-hidden style={{ ...St.topEdge, background: `linear-gradient(90deg, transparent, ${medal.accent}aa 22%, ${medal.accent2} 50%, ${medal.accent}aa 78%, transparent)` }} />
-      <span aria-hidden style={St.scanlines} />
+      {/* one soft top sheen + (hero only) a slow light pass — no scanlines/brackets */}
+      <span aria-hidden style={St.cardGloss} />
       {selected && <span aria-hidden style={St.cardSweep} />}
-      <Corners color={medal.accent} alpha={selected ? "88" : "55"} />
 
-      {/* header: rank serial + medal label */}
       <div style={St.cardHead}>
-        <span style={{ ...St.serial, color: `${medal.accent}cc` }}>{medal.serial}</span>
-        <span style={{ ...St.medalTag, color: medal.accent, borderColor: `${medal.accent}66`, background: `${medal.accent}1c` }}>
-          {selected && <span style={{ ...St.tagDot, background: medal.accent }} />}
-          {medal.label}
-        </span>
+        <Medallion medal={medal} selected={selected} />
+        <span style={{ ...St.medalLabel, color: `${medal.accent}d8` }}>{medal.label}</span>
       </div>
 
-      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 19 : 14.5, WebkitLineClamp: selected ? 2 : 3 }}>
+      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 20 : 14.5, WebkitLineClamp: selected ? 2 : 3 }}>
         {path.title}
       </div>
 
       {selected && (
         <>
-          <span aria-hidden style={{ ...St.cardDivider, background: `linear-gradient(90deg, ${medal.accent}66, transparent)` }} />
           {path.summary && <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>}
           {path.earnings && (
             <div style={St.cardMetaRow}>
-              <span style={{ ...St.cardMetaLabel, color: `${medal.accent}aa` }}>EST</span>
+              <span style={{ ...St.cardMetaLabel, color: `${medal.accent}b0` }}>Est. earnings</span>
               <span style={{ ...St.cardMetaVal, color: medal.title }}>{path.earnings}</span>
             </div>
           )}
@@ -482,51 +475,50 @@ function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
   );
 }
 
-// ── Path Info detail panel (system readout) ─────────────────────────────────
+// ── Path Info → personalized route briefing ─────────────────────────────────
 function PathInfo({ path, medal }) {
   const meta = [
-    path.earnings && { k: "EST", v: path.earnings, accent: true },
-    path.timeToFirst && { k: "TTFP", v: path.timeToFirst },
-    path.difficulty && { k: "TIER", v: path.difficulty },
-    tierLabel(path.tier) && { k: "TRACK", v: tierLabel(path.tier) },
+    path.earnings && { k: "Est. earnings", v: path.earnings, accent: true },
+    path.timeToFirst && { k: "First payday", v: path.timeToFirst },
+    path.difficulty && { k: "Level", v: path.difficulty },
+    tierLabel(path.tier) && { k: "Track", v: tierLabel(path.tier) },
   ].filter(Boolean);
   const chips = reasonChips(path);
 
   return (
     <div style={{ ...St.infoCard, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
-      <span aria-hidden style={{ ...St.infoAccentLine, background: `linear-gradient(180deg, ${medal.accent}, ${medal.accent}00)` }} />
-      <span aria-hidden style={St.scanlines} />
+      <span aria-hidden style={{ ...St.infoTopGlow, background: `radial-gradient(90% 100% at 0% 0%, ${medal.accent}16, transparent 62%)` }} />
 
       <div style={St.infoHeadRow}>
-        <span style={{ ...St.infoKicker, color: `${medal.accent}cc` }}>▸ PATH DETAIL</span>
-        <span style={St.infoKickerDim}>{medal.serial}</span>
+        <span style={{ ...St.infoDot, background: medal.accent, boxShadow: `0 0 10px ${medal.glow}` }} />
+        <span style={{ ...St.infoKicker, color: `${medal.accent}cc` }}>Your route</span>
       </div>
 
-      <h2 style={{ ...St.infoTitle, backgroundImage: `linear-gradient(120deg, ${medal.accent2}, ${medal.accent})` }}>
+      <h2 style={{ ...St.infoTitle, backgroundImage: `linear-gradient(118deg, ${medal.accent2}, ${medal.accent})` }}>
         {path.title}
       </h2>
       <p style={St.infoWhy}>{whyCopy(path)}</p>
 
-      <div style={St.metaGrid}>
+      <div style={St.metaRow}>
         {meta.map((m, i) => (
-          <div key={i} style={St.metaCell}>
-            <span style={{ ...St.metaKey, color: `${medal.accent}99` }}>{m.k}</span>
-            <span style={{ ...St.metaVal, color: m.accent ? C.gold : C.text }}>{m.v}</span>
+          <div key={i} style={{ ...St.metaItem, borderLeft: i === 0 ? "none" : `1px solid ${C.border}` }}>
+            <span style={St.metaKey}>{m.k}</span>
+            <span style={{ ...St.metaVal, color: m.accent ? medal.title : C.text }}>{m.v}</span>
           </div>
         ))}
       </div>
 
       {chips.length > 0 && (
-        <>
-          <div style={{ ...St.sysLabel, color: `${medal.accent}aa` }}>MATCH RATIONALE</div>
+        <div style={St.reasonWrap}>
+          <div style={St.sysLabel}>Why this fits you</div>
           <div style={St.reasonRow}>
             {chips.map((c) => (
-              <span key={c} style={{ ...St.reasonChip, borderColor: `${medal.accent}55`, color: medal.accent, background: `${medal.accent}12` }}>
-                <span style={{ ...St.chipTick, background: medal.accent }} />{c}
+              <span key={c} style={{ ...St.reasonChip, color: medal.title, background: `${medal.accent}16`, boxShadow: `inset 0 0 0 1px ${medal.accent}33` }}>
+                {c}
               </span>
             ))}
           </div>
-        </>
+        </div>
       )}
     </div>
   );
@@ -554,7 +546,7 @@ function Keyframes() {
       }
       @keyframes auroInfoIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes auroSheen { 0% { transform: translateX(-140%) skewX(-18deg); } 55%,100% { transform: translateX(360%) skewX(-18deg); } }
-      @keyframes auroCardSweep { 0% { transform: translateX(-160%) skewX(-16deg); opacity: 0; } 18% { opacity: .8; } 50%,100% { transform: translateX(320%) skewX(-16deg); opacity: 0; } }
+      @keyframes auroCardSweep { 0% { transform: translateX(-170%) skewX(-14deg); opacity: 0; } 22% { opacity: .5; } 50%,100% { transform: translateX(320%) skewX(-14deg); opacity: 0; } }
       .auroScroller::-webkit-scrollbar { display: none; height: 0; }
     `}</style>
   );
@@ -572,109 +564,108 @@ const St = {
   ringDot: { position: "absolute", top: "50%", left: "50%", width: 10, height: 10, borderRadius: "50%",
     transform: "translate(-50%,-50%)", animation: "auroBreath 1s ease-in-out infinite" },
 
-  // Archetype card
-  archCard: { position: "relative", overflow: "hidden", background:
-      "radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.03), transparent 60%)," +
-      "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
-    border: `1px solid ${C.border}`, borderRadius: "6px 22px 22px 22px", padding: "26px 22px", textAlign: "center" },
-  archGlow: { position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 },
-  glyph: { position: "relative", zIndex: 2, fontSize: 30, marginBottom: 8, lineHeight: 1 },
-  kicker: { position: "relative", zIndex: 2, letterSpacing: 3, fontSize: 10, fontWeight: 800, marginBottom: 8,
-    fontFamily: "ui-monospace, Menlo, monospace" },
-  archTitle: { position: "relative", zIndex: 2, fontSize: 34, fontWeight: 900, margin: "0 0 12px", lineHeight: 1.1,
-    WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  identity: { position: "relative", zIndex: 2, fontSize: 16.5, fontWeight: 650, color: C.text, margin: "0 0 12px", lineHeight: 1.35 },
-  mirror: { position: "relative", zIndex: 2, fontSize: 14.5, color: "rgba(245,246,250,0.74)", lineHeight: 1.55, margin: 0 },
-  chips: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 7, justifyContent: "center", marginTop: 18 },
-  chip: { fontSize: 11, fontWeight: 650, letterSpacing: 0.3, padding: "5px 10px", borderRadius: 4, border: "1px solid",
-    background: "rgba(255,255,255,0.03)" },
-
-  sectionHead: { display: "flex", alignItems: "center", gap: 12, margin: "8px 6px 0" },
-  sectionRule: { flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent)" },
-  sectionText: { fontSize: 10, letterSpacing: 3, color: "rgba(245,246,250,0.6)", fontWeight: 800, fontFamily: "ui-monospace, Menlo, monospace" },
-
-  // Podium atmosphere + carousel (native scroll-snap, dressed as coverflow)
-  stageWrap: { position: "relative", width: "100%" },
-  atmosphere: { position: "absolute", inset: "-14% -10% -6%", pointerEvents: "none", zIndex: 0,
+  // Archetype card → soft identity plate (editorial, asymmetric)
+  archCard: { position: "relative", overflow: "hidden",
     background:
-      "radial-gradient(62% 56% at 50% 38%, rgba(245,200,66,0.12), transparent 72%)," +
-      "radial-gradient(80% 60% at 50% 8%, rgba(255,255,255,0.05), transparent 60%)," +
-      "repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 4px)," +
-      "radial-gradient(120% 88% at 50% 52%, transparent 56%, rgba(0,0,0,0.42) 100%)" },
+      "radial-gradient(130% 80% at 50% -10%, rgba(255,255,255,0.05), transparent 60%)," +
+      "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))",
+    border: `1px solid ${C.border}`, borderRadius: "26px 26px 22px 20px", padding: "24px 24px 22px",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 22px 48px rgba(0,0,0,0.42)" },
+  archTexture: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" },
+  archTopRow: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 14, marginBottom: 14 },
+  archMedallion: { flex: "0 0 auto", width: 48, height: 48, borderRadius: 16, display: "flex",
+    alignItems: "center", justifyContent: "center", fontSize: 24, lineHeight: 1,
+    background: "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(0,0,0,0.25))" },
+  archTopText: { minWidth: 0 },
+  archKicker: { fontSize: 10.5, fontWeight: 800, letterSpacing: 2.5, marginBottom: 4 },
+  archTitle: { fontSize: 30, fontWeight: 900, margin: 0, lineHeight: 1.08, letterSpacing: -0.4,
+    WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
+  identity: { position: "relative", zIndex: 2, fontSize: 16, fontWeight: 600, color: C.text, margin: "0 0 14px", lineHeight: 1.4 },
+  archHair: { position: "relative", zIndex: 2, display: "block", height: 1, width: "100%", margin: "0 0 13px" },
+  mirror: { position: "relative", zIndex: 2, fontSize: 14.5, color: "rgba(245,246,250,0.76)", lineHeight: 1.58, margin: 0 },
+  chips: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 },
+  chip: { fontSize: 11.5, fontWeight: 650, letterSpacing: 0.2, padding: "5px 11px", borderRadius: 999, border: "1px solid" },
+
+  sectionHead: { display: "flex", alignItems: "center", gap: 12, margin: "10px 8px 2px" },
+  sectionRule: { flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)" },
+  sectionText: { fontSize: 11, letterSpacing: 2, color: "rgba(245,246,250,0.62)", fontWeight: 700 },
+
+  // Podium atmosphere + carousel (native scroll-snap, soft coverflow)
+  stageWrap: { position: "relative", width: "100%" },
+  atmosphere: { position: "absolute", inset: "-16% -12% -8%", pointerEvents: "none", zIndex: 0,
+    background:
+      "radial-gradient(58% 60% at 50% 40%, rgba(245,200,66,0.13), transparent 70%)," +
+      "radial-gradient(70% 50% at 50% 6%, rgba(120,150,210,0.06), transparent 62%)," +
+      "radial-gradient(120% 90% at 50% 54%, transparent 58%, rgba(0,0,0,0.34) 100%)" },
   scroller: { position: "relative", zIndex: 1, display: "flex", flexDirection: "row", flexWrap: "nowrap",
-    alignItems: "center", justifyContent: "flex-start", height: 326, width: "100%",
+    alignItems: "center", justifyContent: "flex-start", height: 330, width: "100%",
     overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory",
-    WebkitOverflowScrolling: "touch", perspective: "1100px",
-    // calc() lets the first/last card reach centre; ~94px = half the 188px snap step.
+    WebkitOverflowScrolling: "touch", perspective: "1200px",
     padding: "0 calc(50% - 94px)",
     scrollbarWidth: "none", msOverflowStyle: "none" },
   snapItem: { flex: "0 0 188px", height: "100%", display: "flex", alignItems: "center",
-    justifyContent: "center", scrollSnapAlign: "center",
-    margin: "0 -18px" }, // lighter overlap: side cards stay clearly readable behind the hero
+    justifyContent: "center", scrollSnapAlign: "center", margin: "0 -18px" },
   podCard: { position: "relative", width: 200, boxSizing: "border-box", overflow: "hidden",
     textAlign: "left", font: "inherit", color: C.text, cursor: "pointer",
-    border: "1px solid", display: "flex", flexDirection: "column", gap: 7,
+    display: "flex", flexDirection: "column", gap: 8,
     transformOrigin: "center", backfaceVisibility: "hidden",
-    transition: "transform .36s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, opacity .3s ease, border-color .3s ease, width .3s ease, min-height .3s ease, padding .3s ease" },
-  // card overlays
-  topEdge: { position: "absolute", top: 0, left: 9, right: 9, height: 1, zIndex: 2, pointerEvents: "none" },
-  scanlines: { position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none", borderRadius: "inherit",
-    background: "repeating-linear-gradient(0deg, rgba(255,255,255,0.028) 0 1px, transparent 1px 3px)", opacity: 0.45 },
-  cardSweep: { position: "absolute", top: 0, bottom: 0, left: 0, width: "34%", zIndex: 2, pointerEvents: "none",
-    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.16), transparent)",
-    animation: "auroCardSweep 6.5s ease-in-out infinite" },
+    transition: "transform .4s cubic-bezier(.22,.68,.2,1), box-shadow .35s ease, opacity .35s ease, border-color .35s ease, width .35s ease, min-height .35s ease, padding .35s ease" },
+  // soft overlays (one gloss + a gentle sweep on the hero)
+  cardGloss: { position: "absolute", top: 0, left: 0, right: 0, height: "52%", zIndex: 1, pointerEvents: "none",
+    borderRadius: "inherit",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0))" },
+  cardSweep: { position: "absolute", top: 0, bottom: 0, left: 0, width: "40%", zIndex: 2, pointerEvents: "none",
+    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.12), transparent)",
+    animation: "auroCardSweep 7s ease-in-out infinite" },
   // card content
-  cardHead: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  serial: { fontSize: 9.5, fontWeight: 700, letterSpacing: 2, fontFamily: "ui-monospace, Menlo, monospace" },
-  medalTag: { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9.5, fontWeight: 800,
-    letterSpacing: 1, textTransform: "uppercase", padding: "3px 8px", borderRadius: 3, border: "1px solid" },
-  tagDot: { width: 5, height: 5, borderRadius: "50%", flex: "0 0 auto" },
-  cardDivider: { position: "relative", zIndex: 2, height: 1, margin: "3px 0 1px" },
-  cardMetaRow: { position: "relative", zIndex: 2, display: "flex", alignItems: "baseline", gap: 7, marginTop: "auto", paddingTop: 4 },
-  cardMetaLabel: { fontSize: 9, fontWeight: 700, letterSpacing: 1.5, fontFamily: "ui-monospace, Menlo, monospace" },
-  cardMetaVal: { fontSize: 12.5, fontWeight: 750 },
-  podName: { position: "relative", zIndex: 2, fontWeight: 800, color: C.text, lineHeight: 1.2, letterSpacing: 0.2,
+  cardHead: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 9 },
+  medallion: { flex: "0 0 auto", display: "inline-flex", alignItems: "center", justifyContent: "center",
+    borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: 0.3 },
+  medalLabel: { fontSize: 11.5, fontWeight: 750, letterSpacing: 0.2 },
+  cardMetaRow: { position: "relative", zIndex: 2, display: "flex", flexDirection: "column", gap: 1, marginTop: "auto", paddingTop: 6 },
+  cardMetaLabel: { fontSize: 10.5, fontWeight: 600, letterSpacing: 0.2 },
+  cardMetaVal: { fontSize: 15, fontWeight: 800, letterSpacing: -0.2 },
+  podName: { position: "relative", zIndex: 2, fontWeight: 800, color: C.text, lineHeight: 1.22, letterSpacing: -0.2,
     display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
-  podSummary: { position: "relative", zIndex: 2, fontSize: 12.5, lineHeight: 1.45,
+  podSummary: { position: "relative", zIndex: 2, fontSize: 13, lineHeight: 1.46,
     display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
 
-  // Path Info (system readout)
+  // Path Info → personalized route briefing
   infoCard: { position: "relative", overflow: "hidden",
     background:
-      "radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.03), transparent 60%)," +
-      "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.014))",
-    border: `1px solid ${C.border}`, borderRadius: "4px 16px 16px 16px", padding: "15px 18px 16px 20px",
-    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03), 0 14px 30px rgba(0,0,0,0.35)" },
-  infoAccentLine: { position: "absolute", top: 14, bottom: 14, left: 0, width: 3, borderRadius: 2, zIndex: 1 },
-  infoHeadRow: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 },
-  infoKicker: { letterSpacing: 2.5, fontSize: 10, fontWeight: 800, fontFamily: "ui-monospace, Menlo, monospace" },
-  infoKickerDim: { letterSpacing: 2, fontSize: 9.5, fontWeight: 700, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace" },
-  infoTitle: { position: "relative", zIndex: 2, fontSize: 22, fontWeight: 850, margin: "0 0 8px", lineHeight: 1.14,
+      "radial-gradient(130% 70% at 0% 0%, rgba(255,255,255,0.045), transparent 56%)," +
+      "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))",
+    border: `1px solid ${C.border}`, borderRadius: "22px 22px 22px 26px", padding: "18px 20px 18px",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05), 0 18px 38px rgba(0,0,0,0.36)" },
+  infoTopGlow: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" },
+  infoHeadRow: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 8, marginBottom: 9 },
+  infoDot: { width: 7, height: 7, borderRadius: 999, flex: "0 0 auto" },
+  infoKicker: { fontSize: 11.5, fontWeight: 750, letterSpacing: 0.4 },
+  infoTitle: { position: "relative", zIndex: 2, fontSize: 23, fontWeight: 850, margin: "0 0 9px", lineHeight: 1.12, letterSpacing: -0.4,
     WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  infoWhy: { position: "relative", zIndex: 2, fontSize: 14, color: C.text, opacity: 0.86, lineHeight: 1.5, margin: "0 0 14px" },
-  metaGrid: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 15 },
-  metaCell: { display: "flex", flexDirection: "column", gap: 3, padding: "7px 11px", minWidth: 60,
-    borderRadius: 4, background: "rgba(255,255,255,0.035)", border: `1px solid ${C.border}` },
-  metaKey: { fontSize: 8.5, fontWeight: 800, letterSpacing: 1.5, fontFamily: "ui-monospace, Menlo, monospace" },
-  metaVal: { fontSize: 13, fontWeight: 750 },
-  sysLabel: { position: "relative", zIndex: 2, fontSize: 9, fontWeight: 800, letterSpacing: 2,
-    fontFamily: "ui-monospace, Menlo, monospace", marginBottom: 8 },
-  reasonRow: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 6 },
-  reasonChip: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 650,
-    letterSpacing: 0.2, padding: "5px 9px", borderRadius: 4, border: "1px solid" },
-  chipTick: { width: 4, height: 4, borderRadius: "50%", flex: "0 0 auto" },
+  infoWhy: { position: "relative", zIndex: 2, fontSize: 14.5, color: C.text, opacity: 0.88, lineHeight: 1.52, margin: "0 0 16px" },
+  metaRow: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 0, marginBottom: 16 },
+  metaItem: { display: "flex", flexDirection: "column", gap: 3, padding: "2px 14px 2px 14px", minWidth: 70 },
+  metaKey: { fontSize: 11, fontWeight: 600, color: C.dim, letterSpacing: 0.2 },
+  metaVal: { fontSize: 15, fontWeight: 800, letterSpacing: -0.2 },
+  sysLabel: { position: "relative", zIndex: 2, fontSize: 11.5, fontWeight: 700, color: "rgba(245,246,250,0.6)",
+    letterSpacing: 0.3, marginBottom: 9 },
+  reasonWrap: { position: "relative", zIndex: 2 },
+  reasonRow: { display: "flex", flexWrap: "wrap", gap: 7 },
+  reasonChip: { display: "inline-flex", alignItems: "center", fontSize: 12, fontWeight: 600,
+    letterSpacing: 0.1, padding: "6px 12px", borderRadius: 999 },
 
-  // CTA
-  cta: { position: "relative", overflow: "hidden", width: "100%", padding: "15px 20px",
-    borderRadius: "4px 12px 12px 12px", border: "none", fontWeight: 800, fontSize: 15.5, letterSpacing: 0.3,
-    color: "#0a0b10", cursor: "pointer", marginTop: 2, transform: "scale(1)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -2px 7px rgba(0,0,0,0.28), 0 10px 26px rgba(0,0,0,0.42)",
-    transition: "transform .14s ease, filter .15s ease, box-shadow .2s ease" },
+  // CTA → soft premium key
+  cta: { position: "relative", overflow: "hidden", width: "100%", padding: "16px 22px",
+    borderRadius: "18px 18px 18px 14px", border: "none", fontWeight: 800, fontSize: 16, letterSpacing: 0.2,
+    color: "#120d04", cursor: "pointer", marginTop: 4, transform: "scale(1)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -3px 9px rgba(0,0,0,0.22), 0 14px 34px rgba(0,0,0,0.4)",
+    transition: "transform .16s ease, filter .18s ease, box-shadow .22s ease" },
   ctaLabel: { position: "relative", zIndex: 1 },
-  ctaSheen: { position: "absolute", top: 0, bottom: 0, left: 0, width: "38%", zIndex: 0, pointerEvents: "none",
-    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.5), transparent)",
-    animation: "auroSheen 5.5s ease-in-out infinite" },
-  ctaSub: { fontSize: 12, color: C.dim, textAlign: "center" },
+  ctaSheen: { position: "absolute", top: 0, bottom: 0, left: 0, width: "40%", zIndex: 0, pointerEvents: "none",
+    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.42), transparent)",
+    animation: "auroSheen 6s ease-in-out infinite" },
+  ctaSub: { fontSize: 12.5, color: "rgba(245,246,250,0.6)", textAlign: "center" },
   debugBtn: { width: "100%", marginTop: 6, padding: "9px 12px", borderRadius: 10,
     border: `1px dashed ${C.border}`, background: "transparent", color: C.dim,
     fontSize: 12, letterSpacing: 0.5, cursor: "pointer", fontFamily: "ui-monospace, Menlo, monospace" },
