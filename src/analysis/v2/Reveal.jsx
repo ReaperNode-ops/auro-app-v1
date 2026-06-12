@@ -328,36 +328,43 @@ function Podium({ top3, selectedIndex, onSelect }) {
 
   return (
     <div ref={scrollerRef} className="auroScroller" style={St.scroller} onScroll={onScroll}>
-      {top3.map((path, i) => (
-        <div
-          key={path.id}
-          ref={(el) => { cardRefs.current[i] = el; }}
-          style={St.snapItem}
-        >
-          <PodiumCard
-            path={path}
-            medal={MEDAL[i]}
-            selected={i === selectedIndex}
-            offset={i - selectedIndex}
-            onSelect={() => selectCard(i)}
-          />
-        </div>
-      ))}
+      {top3.map((path, i) => {
+        const ax = Math.abs(i - selectedIndex);
+        // Flex items honor z-index even when statically positioned, so stacking
+        // the WRAPPER guarantees the selected card paints in front of its
+        // overlapping neighbours (a static card's z-index would be ignored).
+        const zi = i === selectedIndex ? 30 : 10 - ax;
+        return (
+          <div
+            key={path.id}
+            ref={(el) => { cardRefs.current[i] = el; }}
+            style={{ ...St.snapItem, zIndex: zi }}
+          >
+            <PodiumCard
+              path={path}
+              medal={MEDAL[i]}
+              selected={i === selectedIndex}
+              offset={i - selectedIndex}
+              onSelect={() => selectCard(i)}
+            />
+          </div>
+        );
+      })}
     </div>
   );
 }
 
 function PodiumCard({ path, medal, selected, offset, onSelect }) {
-  // Coverflow transform applied to the BUTTON only (the wrapper stays untransformed
-  // so scroll-snap centring math is unaffected).
+  // Coverflow transform applied to the BUTTON only (the wrapper stays
+  // untransformed so scroll-snap centring math is unaffected). Strong overlap +
+  // tilt + scale make the deck read as a podium, not a flat row.
   const ax = Math.min(Math.abs(offset), 2);   // distance from selected (0,1,2)
   const dir = offset < 0 ? 1 : -1;            // left cards shift right; right cards shift left
-  const scale = selected ? 1 : ax === 1 ? 0.82 : 0.74;
-  const tx = selected ? 0 : dir * (ax === 1 ? 42 : 66); // tuck toward centre (overlap)
-  const ty = selected ? 0 : ax * 8;
-  const ry = selected ? 0 : dir * (ax === 1 ? 16 : 22); // coverflow tilt (needs parent perspective)
-  const op = selected ? 1 : ax === 1 ? 0.74 : 0.5;
-  const z = selected ? 6 : 4 - ax;
+  const scale = selected ? 1.06 : ax === 1 ? 0.8 : 0.72;
+  const tx = selected ? 0 : dir * (ax === 1 ? 58 : 92); // tuck hard toward centre (overlap)
+  const ty = selected ? 0 : 14 + ax * 6;                // sit lower so the front card crowns them
+  const ry = selected ? 0 : dir * (ax === 1 ? 24 : 32); // coverflow tilt (parent has perspective)
+  const op = selected ? 1 : ax === 1 ? 0.8 : 0.52;
 
   return (
     <button
@@ -368,12 +375,12 @@ function PodiumCard({ path, medal, selected, offset, onSelect }) {
         ...St.podCard,
         transform: `translateX(${tx}px) translateY(${ty}px) scale(${scale}) rotateY(${ry}deg)`,
         opacity: op,
-        zIndex: z,
-        borderColor: selected ? medal.accent : `${medal.accent}55`,
+        minHeight: selected ? 196 : 150,
+        borderColor: selected ? medal.accent : `${medal.accent}66`,
         background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
-          ? `0 0 40px ${medal.glow}, inset 0 0 0 1px ${medal.accent}66`
-          : `0 12px 26px rgba(0,0,0,0.55), inset 0 0 0 1px ${medal.accent}22`,
+          ? `0 22px 54px rgba(0,0,0,0.55), 0 0 48px ${medal.glow}, inset 0 0 0 1px ${medal.accent}77`
+          : `0 14px 28px rgba(0,0,0,0.6), inset 0 0 0 1px ${medal.accent}33`,
       }}
     >
       <div style={St.medalRow}>
@@ -385,12 +392,10 @@ function PodiumCard({ path, medal, selected, offset, onSelect }) {
         )}
       </div>
 
-      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 16 : 13.5 }}>{path.title}</div>
+      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 17 : 14 }}>{path.title}</div>
 
-      {selected ? (
-        path.summary && <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>
-      ) : (
-        <div style={{ ...St.podHint, color: medal.title }}>Swipe</div>
+      {selected && path.summary && (
+        <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>
       )}
     </button>
   );
@@ -481,19 +486,21 @@ const St = {
   sectionHead: { fontSize: 13, color: C.dim, letterSpacing: 1, margin: "8px 2px 0", fontWeight: 600, textAlign: "center" },
 
   // Podium carousel (native scroll-snap, dressed as coverflow)
-  scroller: { display: "flex", alignItems: "center", gap: 4, width: "100%",
+  scroller: { position: "relative", display: "flex", flexDirection: "row", flexWrap: "nowrap",
+    alignItems: "center", justifyContent: "flex-start", height: 300, width: "100%",
     overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory",
-    WebkitOverflowScrolling: "touch", perspective: "1200px",
+    WebkitOverflowScrolling: "touch", perspective: "1000px",
     // calc() lets the first/last card reach centre; ~94px = half the 188px card.
-    padding: "26px calc(50% - 94px)", margin: "2px 0",
+    padding: "0 calc(50% - 94px)", margin: "4px 0",
     scrollbarWidth: "none", msOverflowStyle: "none" },
-  snapItem: { flex: "0 0 188px", scrollSnapAlign: "center", display: "flex",
-    justifyContent: "center", margin: "0 -10px" }, // slight overlap kills the flat-row feel
-  podCard: { width: 188, minHeight: 176, boxSizing: "border-box",
-    textAlign: "left", font: "inherit", color: C.text, cursor: "pointer", borderRadius: 20,
-    border: "1px solid", padding: "14px 15px", display: "flex", flexDirection: "column", gap: 9,
-    transformOrigin: "center",
-    transition: "transform .34s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, opacity .3s ease, border-color .3s ease" },
+  snapItem: { flex: "0 0 188px", height: "100%", display: "flex", alignItems: "center",
+    justifyContent: "center", scrollSnapAlign: "center",
+    margin: "0 -30px" }, // hard overlap so side cards tuck behind the front card
+  podCard: { position: "relative", width: 188, minHeight: 190, boxSizing: "border-box",
+    textAlign: "left", font: "inherit", color: C.text, cursor: "pointer", borderRadius: 22,
+    border: "1px solid", padding: "16px 16px", display: "flex", flexDirection: "column", gap: 10,
+    transformOrigin: "center", backfaceVisibility: "hidden",
+    transition: "transform .34s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, opacity .3s ease, border-color .3s ease, min-height .3s ease" },
   medalRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
   medalPill: { fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase",
     padding: "4px 9px", borderRadius: 999, border: "1px solid" },
