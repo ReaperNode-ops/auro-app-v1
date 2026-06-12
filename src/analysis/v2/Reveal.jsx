@@ -44,26 +44,51 @@ const C = {
 const LOCK_MS = 950; // the single earned pause before the archetype lands
 
 // Medal treatment by RANK (0 = top pick). Position is decided by selection.
-// Each medal carries solid dark card fills (selected vs idle) plus its own text
-// colours so titles/pills/checks read in the medal's hue while body stays cream.
+// Each medal is a physical brushed-metal card: multi-layer backgrounds (top
+// light source, diagonal brushed streaks, lower vignette, base metal) plus its
+// own text/accent hues. `serial` is the etched HUD code shown on the card.
 const MEDAL = [
   {
-    label: "Top pick", accent: "#f5c842", accent2: "#ffe9a3", glow: "rgba(245,200,66,0.45)",
-    cardSel: "linear-gradient(160deg, #4a3a14 0%, #241b09 100%)",
-    cardIdle: "linear-gradient(160deg, #2f2510 0%, #171106 100%)",
-    title: "#ffe6a0", body: "rgba(255,242,212,0.80)",
+    label: "Top pick", serial: "PATH-01", accent: "#f5c842", accent2: "#ffe9a3", glow: "rgba(245,200,66,0.42)",
+    cardSel:
+      "radial-gradient(135% 78% at 50% -14%, rgba(255,238,190,0.20), transparent 56%)," +
+      "repeating-linear-gradient(118deg, rgba(255,226,150,0.055) 0 1px, transparent 1px 5px)," +
+      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.62), transparent 54%)," +
+      "linear-gradient(157deg, #5c4918 0%, #352810 47%, #181106 100%)",
+    cardIdle:
+      "radial-gradient(135% 78% at 50% -14%, rgba(255,238,190,0.10), transparent 56%)," +
+      "repeating-linear-gradient(118deg, rgba(255,226,150,0.04) 0 1px, transparent 1px 5px)," +
+      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.70), transparent 52%)," +
+      "linear-gradient(157deg, #40310f 0%, #251b0a 50%, #110c05 100%)",
+    title: "#ffe6a0", body: "rgba(255,242,212,0.82)",
   },
   {
-    label: "2nd pick", accent: "#c9d4e4", accent2: "#eef3fa", glow: "rgba(201,212,228,0.42)",
-    cardSel: "linear-gradient(160deg, #363d49 0%, #191d23 100%)",
-    cardIdle: "linear-gradient(160deg, #262b33 0%, #13161a 100%)",
-    title: "#eaf1fb", body: "rgba(228,236,246,0.80)",
+    label: "2nd pick", serial: "PATH-02", accent: "#c9d4e4", accent2: "#eef3fa", glow: "rgba(201,212,228,0.40)",
+    cardSel:
+      "radial-gradient(135% 78% at 50% -14%, rgba(228,238,252,0.18), transparent 56%)," +
+      "repeating-linear-gradient(118deg, rgba(220,232,248,0.05) 0 1px, transparent 1px 5px)," +
+      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.6), transparent 54%)," +
+      "linear-gradient(157deg, #3d4450 0%, #232830 47%, #11141a 100%)",
+    cardIdle:
+      "radial-gradient(135% 78% at 50% -14%, rgba(228,238,252,0.09), transparent 56%)," +
+      "repeating-linear-gradient(118deg, rgba(220,232,248,0.038) 0 1px, transparent 1px 5px)," +
+      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.68), transparent 52%)," +
+      "linear-gradient(157deg, #2c323b 0%, #191d23 50%, #0e1014 100%)",
+    title: "#eaf1fb", body: "rgba(228,236,246,0.82)",
   },
   {
-    label: "3rd pick", accent: "#d08a58", accent2: "#ecb98c", glow: "rgba(208,138,88,0.42)",
-    cardSel: "linear-gradient(160deg, #4a3220 0%, #26180f 100%)",
-    cardIdle: "linear-gradient(160deg, #33241a 0%, #1a1009 100%)",
-    title: "#f3cba4", body: "rgba(242,212,186,0.80)",
+    label: "3rd pick", serial: "PATH-03", accent: "#d08a58", accent2: "#ecb98c", glow: "rgba(208,138,88,0.40)",
+    cardSel:
+      "radial-gradient(135% 78% at 50% -14%, rgba(255,206,166,0.18), transparent 56%)," +
+      "repeating-linear-gradient(118deg, rgba(240,190,150,0.05) 0 1px, transparent 1px 5px)," +
+      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.62), transparent 54%)," +
+      "linear-gradient(157deg, #5c3d26 0%, #351f12 47%, #19100a 100%)",
+    cardIdle:
+      "radial-gradient(135% 78% at 50% -14%, rgba(255,206,166,0.09), transparent 56%)," +
+      "repeating-linear-gradient(118deg, rgba(240,190,150,0.038) 0 1px, transparent 1px 5px)," +
+      "radial-gradient(120% 100% at 50% 122%, rgba(0,0,0,0.70), transparent 52%)," +
+      "linear-gradient(157deg, #42291a 0%, #24160d 50%, #130b06 100%)",
+    title: "#f3cba4", body: "rgba(242,212,186,0.82)",
   },
 ];
 
@@ -245,7 +270,11 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
       </div>
 
       {/* 3: Podium */}
-      <div style={St.sectionHead}>Choose your path</div>
+      <div style={St.sectionHead}>
+        <span style={St.sectionRule} />
+        <span style={St.sectionText}>SELECT PATH</span>
+        <span style={St.sectionRule} />
+      </div>
       <Podium top3={top3} selectedIndex={safeIndex} onSelect={setSelectedIndex} />
 
       {/* 4: Path Info — keyed so it lightly re-animates when the selection changes */}
@@ -331,34 +360,52 @@ function Podium({ top3, selectedIndex, onSelect }) {
   }
 
   return (
-    <div ref={scrollerRef} className="auroScroller" style={St.scroller} onScroll={onScroll}>
-      {top3.map((path, i) => {
-        const ax = Math.abs(i - selectedIndex);
-        // Flex items honor z-index even when statically positioned, so stacking
-        // the WRAPPER guarantees the selected card paints in front of its
-        // overlapping neighbours (a static card's z-index would be ignored).
-        const zi = i === selectedIndex ? 30 : 10 - ax;
-        return (
-          <div
-            key={path.id}
-            ref={(el) => { cardRefs.current[i] = el; }}
-            style={{ ...St.snapItem, zIndex: zi }}
-          >
-            <PodiumCard
-              path={path}
-              medal={MEDAL[i]}
-              selected={i === selectedIndex}
-              offset={i - selectedIndex}
-              onSelect={() => selectCard(i)}
-            />
-          </div>
-        );
-      })}
+    <div style={St.stageWrap}>
+      <div aria-hidden style={St.atmosphere} />
+      <div ref={scrollerRef} className="auroScroller" style={St.scroller} onScroll={onScroll}>
+        {top3.map((path, i) => {
+          const ax = Math.abs(i - selectedIndex);
+          // Flex items honor z-index even when statically positioned, so stacking
+          // the WRAPPER guarantees the selected card paints in front of its
+          // overlapping neighbours (a static card's z-index would be ignored).
+          const zi = i === selectedIndex ? 30 : 10 - ax;
+          return (
+            <div
+              key={path.id}
+              ref={(el) => { cardRefs.current[i] = el; }}
+              style={{ ...St.snapItem, zIndex: zi }}
+            >
+              <PodiumCard
+                path={path}
+                medal={MEDAL[i]}
+                rank={i}
+                selected={i === selectedIndex}
+                offset={i - selectedIndex}
+                onSelect={() => selectCard(i)}
+              />
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
 
-function PodiumCard({ path, medal, selected, offset, onSelect }) {
+// Four etched corner brackets — the HUD frame of a metal access card.
+function Corners({ color, alpha }) {
+  const a = `${color}${alpha}`;
+  const base = { position: "absolute", width: 12, height: 12, pointerEvents: "none", zIndex: 3 };
+  return (
+    <>
+      <span aria-hidden style={{ ...base, top: 8, left: 8, borderTop: `1.5px solid ${a}`, borderLeft: `1.5px solid ${a}` }} />
+      <span aria-hidden style={{ ...base, top: 8, right: 8, borderTop: `1.5px solid ${a}`, borderRight: `1.5px solid ${a}` }} />
+      <span aria-hidden style={{ ...base, bottom: 8, left: 8, borderBottom: `1.5px solid ${a}`, borderLeft: `1.5px solid ${a}` }} />
+      <span aria-hidden style={{ ...base, bottom: 8, right: 8, borderBottom: `1.5px solid ${a}`, borderRight: `1.5px solid ${a}` }} />
+    </>
+  );
+}
+
+function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
   // Transform applied to the BUTTON only (wrapper stays untransformed so the
   // scroll-snap centring math is unaffected). The selected card is a wide hero;
   // the others stay solid but sit smaller, lower, tilted and behind it. Depth
@@ -369,7 +416,7 @@ function PodiumCard({ path, medal, selected, offset, onSelect }) {
   const tx = selected ? 0 : dir * (ax === 1 ? 22 : 40); // light tuck toward centre
   const ty = selected ? 0 : 20 + ax * 10;               // sit lower → podium silhouette
   const ry = selected ? 0 : dir * (ax === 1 ? 20 : 26); // coverflow tilt (parent has perspective)
-  const op = selected ? 1 : ax === 1 ? 0.96 : 0.9;      // stay solid, never ghosted
+  const op = selected ? 1 : ax === 1 ? 0.97 : 0.92;     // stay solid, never ghosted
 
   return (
     <button
@@ -378,76 +425,103 @@ function PodiumCard({ path, medal, selected, offset, onSelect }) {
       aria-pressed={selected}
       style={{
         ...St.podCard,
-        width: selected ? 248 : 202,
-        minHeight: selected ? 212 : 156,
-        padding: selected ? "20px 20px" : "16px 16px",
+        width: selected ? 250 : 204,
+        minHeight: selected ? 216 : 158,
+        padding: selected ? "16px 17px 17px" : "13px 14px 14px",
+        borderRadius: selected ? "16px 16px 16px 6px" : "13px 13px 13px 5px",
         transform: `translateX(${tx}px) translateY(${ty}px) scale(${scale}) rotateY(${ry}deg)`,
         opacity: op,
         borderWidth: selected ? 1.5 : 1,
         borderColor: selected ? medal.accent : `${medal.accent}77`,
         background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
-          ? `0 26px 64px rgba(0,0,0,0.6), 0 0 46px ${medal.glow}, inset 0 0 0 1px ${medal.accent}88`
-          : `0 16px 30px rgba(0,0,0,0.62), inset 0 0 0 1px ${medal.accent}44`,
-        // breathing glow on the hero only (calm, ~3.4s)
+          ? `0 26px 64px rgba(0,0,0,0.62), 0 0 46px ${medal.glow}, inset 0 1px 0 ${medal.accent}66, inset 0 0 0 1px ${medal.accent}55, inset 0 -22px 40px rgba(0,0,0,0.5)`
+          : `0 16px 30px rgba(0,0,0,0.64), inset 0 1px 0 ${medal.accent}33, inset 0 0 0 1px ${medal.accent}33, inset 0 -16px 30px rgba(0,0,0,0.55)`,
         ...(selected
-          ? { "--glow": medal.glow, "--ring": `${medal.accent}88`, animation: "auroGlow 3.4s ease-in-out infinite" }
+          ? { "--glow": medal.glow, "--ring": `${medal.accent}88`, animation: "auroGlow 3.6s ease-in-out infinite" }
           : null),
       }}
     >
-      {/* premium top sheen on the hero card */}
-      {selected && <div aria-hidden style={St.cardSheen} />}
+      {/* material overlays */}
+      <span aria-hidden style={{ ...St.topEdge, background: `linear-gradient(90deg, transparent, ${medal.accent}aa 22%, ${medal.accent2} 50%, ${medal.accent}aa 78%, transparent)` }} />
+      <span aria-hidden style={St.scanlines} />
+      {selected && <span aria-hidden style={St.cardSweep} />}
+      <Corners color={medal.accent} alpha={selected ? "88" : "55"} />
 
-      <div style={St.medalRow}>
-        <span style={{ ...St.medalPill, background: `${medal.accent}26`, color: medal.accent, borderColor: `${medal.accent}66` }}>
+      {/* header: rank serial + medal label */}
+      <div style={St.cardHead}>
+        <span style={{ ...St.serial, color: `${medal.accent}cc` }}>{medal.serial}</span>
+        <span style={{ ...St.medalTag, color: medal.accent, borderColor: `${medal.accent}66`, background: `${medal.accent}1c` }}>
+          {selected && <span style={{ ...St.tagDot, background: medal.accent }} />}
           {medal.label}
         </span>
-        {selected && (
-          <span style={{ ...St.podCheck, background: medal.accent, color: "#0a0b10" }}>✓</span>
-        )}
       </div>
 
       <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 19 : 14.5, WebkitLineClamp: selected ? 2 : 3 }}>
         {path.title}
       </div>
 
-      {selected && path.summary && (
-        <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>
+      {selected && (
+        <>
+          <span aria-hidden style={{ ...St.cardDivider, background: `linear-gradient(90deg, ${medal.accent}66, transparent)` }} />
+          {path.summary && <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>}
+          {path.earnings && (
+            <div style={St.cardMetaRow}>
+              <span style={{ ...St.cardMetaLabel, color: `${medal.accent}aa` }}>EST</span>
+              <span style={{ ...St.cardMetaVal, color: medal.title }}>{path.earnings}</span>
+            </div>
+          )}
+        </>
       )}
     </button>
   );
 }
 
-// ── Path Info detail panel ──────────────────────────────────────────────────
+// ── Path Info detail panel (system readout) ─────────────────────────────────
 function PathInfo({ path, medal }) {
   const meta = [
-    path.earnings && { label: path.earnings, gold: true },
-    path.timeToFirst && { label: path.timeToFirst },
-    path.difficulty && { label: path.difficulty },
-    tierLabel(path.tier) && { label: tierLabel(path.tier) },
+    path.earnings && { k: "EST", v: path.earnings, accent: true },
+    path.timeToFirst && { k: "TTFP", v: path.timeToFirst },
+    path.difficulty && { k: "TIER", v: path.difficulty },
+    tierLabel(path.tier) && { k: "TRACK", v: tierLabel(path.tier) },
   ].filter(Boolean);
   const chips = reasonChips(path);
 
   return (
     <div style={{ ...St.infoCard, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
-      <div style={St.infoKicker}>PATH DETAIL</div>
-      <h2 style={{ ...St.infoTitle, backgroundImage: `linear-gradient(135deg, ${medal.accent2}, ${medal.accent})` }}>
+      <span aria-hidden style={{ ...St.infoAccentLine, background: `linear-gradient(180deg, ${medal.accent}, ${medal.accent}00)` }} />
+      <span aria-hidden style={St.scanlines} />
+
+      <div style={St.infoHeadRow}>
+        <span style={{ ...St.infoKicker, color: `${medal.accent}cc` }}>▸ PATH DETAIL</span>
+        <span style={St.infoKickerDim}>{medal.serial}</span>
+      </div>
+
+      <h2 style={{ ...St.infoTitle, backgroundImage: `linear-gradient(120deg, ${medal.accent2}, ${medal.accent})` }}>
         {path.title}
       </h2>
       <p style={St.infoWhy}>{whyCopy(path)}</p>
 
-      <div style={St.metaRow}>
+      <div style={St.metaGrid}>
         {meta.map((m, i) => (
-          <span key={i} style={{ ...St.metaPill, color: m.gold ? C.gold : C.text }}>{m.label}</span>
+          <div key={i} style={St.metaCell}>
+            <span style={{ ...St.metaKey, color: `${medal.accent}99` }}>{m.k}</span>
+            <span style={{ ...St.metaVal, color: m.accent ? C.gold : C.text }}>{m.v}</span>
+          </div>
         ))}
       </div>
 
       {chips.length > 0 && (
-        <div style={St.reasonRow}>
-          {chips.map((c) => (
-            <span key={c} style={{ ...St.reasonChip, borderColor: `${medal.accent}44`, color: medal.accent }}>{c}</span>
-          ))}
-        </div>
+        <>
+          <div style={{ ...St.sysLabel, color: `${medal.accent}aa` }}>MATCH RATIONALE</div>
+          <div style={St.reasonRow}>
+            {chips.map((c) => (
+              <span key={c} style={{ ...St.reasonChip, borderColor: `${medal.accent}55`, color: medal.accent, background: `${medal.accent}12` }}>
+                <span style={{ ...St.chipTick, background: medal.accent }} />{c}
+              </span>
+            ))}
+          </div>
+        </>
       )}
     </div>
   );
@@ -475,6 +549,7 @@ function Keyframes() {
       }
       @keyframes auroInfoIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes auroSheen { 0% { transform: translateX(-140%) skewX(-18deg); } 55%,100% { transform: translateX(360%) skewX(-18deg); } }
+      @keyframes auroCardSweep { 0% { transform: translateX(-160%) skewX(-16deg); opacity: 0; } 18% { opacity: .8; } 50%,100% { transform: translateX(320%) skewX(-16deg); opacity: 0; } }
       .auroScroller::-webkit-scrollbar { display: none; height: 0; }
     `}</style>
   );
@@ -506,58 +581,89 @@ const St = {
   chip: { fontSize: 12, padding: "5px 11px", borderRadius: 999, border: "1px solid",
     color: C.text, background: "rgba(255,255,255,0.03)" },
 
-  sectionHead: { fontSize: 13, color: C.dim, letterSpacing: 1, margin: "8px 2px 0", fontWeight: 600, textAlign: "center" },
+  sectionHead: { display: "flex", alignItems: "center", gap: 12, margin: "8px 6px 0" },
+  sectionRule: { flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)" },
+  sectionText: { fontSize: 10, letterSpacing: 3, color: C.dim, fontWeight: 800, fontFamily: "ui-monospace, Menlo, monospace" },
 
-  // Podium carousel (native scroll-snap, dressed as coverflow)
-  scroller: { position: "relative", display: "flex", flexDirection: "row", flexWrap: "nowrap",
+  // Podium atmosphere + carousel (native scroll-snap, dressed as coverflow)
+  stageWrap: { position: "relative", width: "100%" },
+  atmosphere: { position: "absolute", inset: "-12% -8% -4%", pointerEvents: "none", zIndex: 0,
+    background:
+      "radial-gradient(58% 50% at 50% 42%, rgba(245,200,66,0.07), transparent 70%)," +
+      "repeating-linear-gradient(0deg, rgba(255,255,255,0.016) 0 1px, transparent 1px 4px)," +
+      "radial-gradient(120% 86% at 50% 50%, transparent 52%, rgba(0,0,0,0.55) 100%)" },
+  scroller: { position: "relative", zIndex: 1, display: "flex", flexDirection: "row", flexWrap: "nowrap",
     alignItems: "center", justifyContent: "flex-start", height: 320, width: "100%",
     overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory",
     WebkitOverflowScrolling: "touch", perspective: "1100px",
     // calc() lets the first/last card reach centre; ~94px = half the 188px snap step.
-    padding: "0 calc(50% - 94px)", margin: "4px 0",
+    padding: "0 calc(50% - 94px)",
     scrollbarWidth: "none", msOverflowStyle: "none" },
   snapItem: { flex: "0 0 188px", height: "100%", display: "flex", alignItems: "center",
     justifyContent: "center", scrollSnapAlign: "center",
     margin: "0 -26px" }, // gentle overlap: side cards stay clearly visible behind the hero
   podCard: { position: "relative", width: 200, boxSizing: "border-box", overflow: "hidden",
-    textAlign: "left", font: "inherit", color: C.text, cursor: "pointer", borderRadius: 22,
-    border: "1px solid", display: "flex", flexDirection: "column", gap: 10,
+    textAlign: "left", font: "inherit", color: C.text, cursor: "pointer",
+    border: "1px solid", display: "flex", flexDirection: "column", gap: 7,
     transformOrigin: "center", backfaceVisibility: "hidden",
     transition: "transform .36s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, opacity .3s ease, border-color .3s ease, width .3s ease, min-height .3s ease, padding .3s ease" },
-  cardSheen: { position: "absolute", top: 0, left: 0, right: 0, height: "46%", pointerEvents: "none",
-    borderRadius: "22px 22px 0 0",
-    background: "linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0))" },
-  medalRow: { position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  medalPill: { fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase",
-    padding: "4px 9px", borderRadius: 999, border: "1px solid" },
-  podCheck: { width: 22, height: 22, borderRadius: "50%", display: "inline-flex", alignItems: "center",
-    justifyContent: "center", fontSize: 12, fontWeight: 900, flex: "0 0 auto" },
-  podName: { position: "relative", zIndex: 1, fontWeight: 800, color: C.text, lineHeight: 1.22,
+  // card overlays
+  topEdge: { position: "absolute", top: 0, left: 9, right: 9, height: 1, zIndex: 2, pointerEvents: "none" },
+  scanlines: { position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none", borderRadius: "inherit",
+    background: "repeating-linear-gradient(0deg, rgba(255,255,255,0.028) 0 1px, transparent 1px 3px)", opacity: 0.45 },
+  cardSweep: { position: "absolute", top: 0, bottom: 0, left: 0, width: "34%", zIndex: 2, pointerEvents: "none",
+    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.16), transparent)",
+    animation: "auroCardSweep 6.5s ease-in-out infinite" },
+  // card content
+  cardHead: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
+  serial: { fontSize: 9.5, fontWeight: 700, letterSpacing: 2, fontFamily: "ui-monospace, Menlo, monospace" },
+  medalTag: { display: "inline-flex", alignItems: "center", gap: 5, fontSize: 9.5, fontWeight: 800,
+    letterSpacing: 1, textTransform: "uppercase", padding: "3px 8px", borderRadius: 3, border: "1px solid" },
+  tagDot: { width: 5, height: 5, borderRadius: "50%", flex: "0 0 auto" },
+  cardDivider: { position: "relative", zIndex: 2, height: 1, margin: "3px 0 1px" },
+  cardMetaRow: { position: "relative", zIndex: 2, display: "flex", alignItems: "baseline", gap: 7, marginTop: "auto", paddingTop: 4 },
+  cardMetaLabel: { fontSize: 9, fontWeight: 700, letterSpacing: 1.5, fontFamily: "ui-monospace, Menlo, monospace" },
+  cardMetaVal: { fontSize: 12.5, fontWeight: 750 },
+  podName: { position: "relative", zIndex: 2, fontWeight: 800, color: C.text, lineHeight: 1.2, letterSpacing: 0.2,
     display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
-  podSummary: { position: "relative", zIndex: 1, fontSize: 12.5, color: C.dim, lineHeight: 1.45,
+  podSummary: { position: "relative", zIndex: 2, fontSize: 12.5, lineHeight: 1.45,
     display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
 
-  // Path Info
-  infoCard: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: "18px 18px 16px" },
-  infoKicker: { letterSpacing: 3, fontSize: 10.5, color: C.dim, fontWeight: 700, marginBottom: 6 },
-  infoTitle: { fontSize: 22, fontWeight: 850, margin: "0 0 8px", lineHeight: 1.15,
+  // Path Info (system readout)
+  infoCard: { position: "relative", overflow: "hidden",
+    background:
+      "radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.03), transparent 60%)," +
+      "linear-gradient(180deg, rgba(255,255,255,0.035), rgba(255,255,255,0.014))",
+    border: `1px solid ${C.border}`, borderRadius: "4px 16px 16px 16px", padding: "15px 18px 16px 20px",
+    boxShadow: "inset 0 0 0 1px rgba(255,255,255,0.03), 0 14px 30px rgba(0,0,0,0.35)" },
+  infoAccentLine: { position: "absolute", top: 14, bottom: 14, left: 0, width: 3, borderRadius: 2, zIndex: 1 },
+  infoHeadRow: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 9 },
+  infoKicker: { letterSpacing: 2.5, fontSize: 10, fontWeight: 800, fontFamily: "ui-monospace, Menlo, monospace" },
+  infoKickerDim: { letterSpacing: 2, fontSize: 9.5, fontWeight: 700, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace" },
+  infoTitle: { position: "relative", zIndex: 2, fontSize: 22, fontWeight: 850, margin: "0 0 8px", lineHeight: 1.14,
     WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  infoWhy: { fontSize: 14, color: C.text, opacity: 0.85, lineHeight: 1.5, margin: "0 0 14px" },
-  metaRow: { display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 12 },
-  metaPill: { fontSize: 12.5, fontWeight: 700, padding: "6px 11px", borderRadius: 10,
-    background: "rgba(255,255,255,0.05)", border: `1px solid ${C.border}` },
-  reasonRow: { display: "flex", flexWrap: "wrap", gap: 7 },
-  reasonChip: { fontSize: 11.5, fontWeight: 600, padding: "5px 10px", borderRadius: 999,
-    border: "1px solid", background: "rgba(255,255,255,0.02)" },
+  infoWhy: { position: "relative", zIndex: 2, fontSize: 14, color: C.text, opacity: 0.86, lineHeight: 1.5, margin: "0 0 14px" },
+  metaGrid: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 8, marginBottom: 15 },
+  metaCell: { display: "flex", flexDirection: "column", gap: 3, padding: "7px 11px", minWidth: 60,
+    borderRadius: 4, background: "rgba(255,255,255,0.035)", border: `1px solid ${C.border}` },
+  metaKey: { fontSize: 8.5, fontWeight: 800, letterSpacing: 1.5, fontFamily: "ui-monospace, Menlo, monospace" },
+  metaVal: { fontSize: 13, fontWeight: 750 },
+  sysLabel: { position: "relative", zIndex: 2, fontSize: 9, fontWeight: 800, letterSpacing: 2,
+    fontFamily: "ui-monospace, Menlo, monospace", marginBottom: 8 },
+  reasonRow: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 6 },
+  reasonChip: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11, fontWeight: 650,
+    letterSpacing: 0.2, padding: "5px 9px", borderRadius: 4, border: "1px solid" },
+  chipTick: { width: 4, height: 4, borderRadius: "50%", flex: "0 0 auto" },
 
   // CTA
-  cta: { position: "relative", overflow: "hidden", width: "100%", padding: "16px 20px",
-    borderRadius: 16, border: "none", fontWeight: 800, fontSize: 16, color: "#0a0b10",
-    cursor: "pointer", marginTop: 6, transform: "scale(1)",
-    transition: "transform .14s ease, filter .15s ease" },
+  cta: { position: "relative", overflow: "hidden", width: "100%", padding: "15px 20px",
+    borderRadius: "4px 12px 12px 12px", border: "none", fontWeight: 800, fontSize: 15.5, letterSpacing: 0.3,
+    color: "#0a0b10", cursor: "pointer", marginTop: 2, transform: "scale(1)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5), inset 0 -2px 7px rgba(0,0,0,0.28), 0 10px 26px rgba(0,0,0,0.42)",
+    transition: "transform .14s ease, filter .15s ease, box-shadow .2s ease" },
   ctaLabel: { position: "relative", zIndex: 1 },
   ctaSheen: { position: "absolute", top: 0, bottom: 0, left: 0, width: "38%", zIndex: 0, pointerEvents: "none",
-    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.45), transparent)",
+    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.5), transparent)",
     animation: "auroSheen 5.5s ease-in-out infinite" },
   ctaSub: { fontSize: 12, color: C.dim, textAlign: "center" },
   debugBtn: { width: "100%", marginTop: 6, padding: "9px 12px", borderRadius: 10,
