@@ -355,16 +355,16 @@ function Podium({ top3, selectedIndex, onSelect }) {
 }
 
 function PodiumCard({ path, medal, selected, offset, onSelect }) {
-  // Coverflow transform applied to the BUTTON only (the wrapper stays
-  // untransformed so scroll-snap centring math is unaffected). Strong overlap +
-  // tilt + scale make the deck read as a podium, not a flat row.
+  // Transform applied to the BUTTON only (wrapper stays untransformed so the
+  // scroll-snap centring math is unaffected). The selected card is a wide hero;
+  // the others scale down, drop lower, tilt back and tuck behind it.
   const ax = Math.min(Math.abs(offset), 2);   // distance from selected (0,1,2)
   const dir = offset < 0 ? 1 : -1;            // left cards shift right; right cards shift left
-  const scale = selected ? 1.06 : ax === 1 ? 0.8 : 0.72;
-  const tx = selected ? 0 : dir * (ax === 1 ? 58 : 92); // tuck hard toward centre (overlap)
-  const ty = selected ? 0 : 14 + ax * 6;                // sit lower so the front card crowns them
-  const ry = selected ? 0 : dir * (ax === 1 ? 24 : 32); // coverflow tilt (parent has perspective)
-  const op = selected ? 1 : ax === 1 ? 0.8 : 0.52;
+  const scale = selected ? 1 : ax === 1 ? 0.74 : 0.62;
+  const tx = selected ? 0 : dir * (ax === 1 ? 34 : 58); // extra tuck toward centre (overlap)
+  const ty = selected ? 0 : 24 + ax * 14;               // sit lower → podium silhouette
+  const ry = selected ? 0 : dir * (ax === 1 ? 26 : 34); // coverflow tilt (parent has perspective)
+  const op = selected ? 1 : ax === 1 ? 0.72 : 0.46;
 
   return (
     <button
@@ -373,16 +373,22 @@ function PodiumCard({ path, medal, selected, offset, onSelect }) {
       aria-pressed={selected}
       style={{
         ...St.podCard,
+        width: selected ? 248 : 200,
+        minHeight: selected ? 212 : 150,
+        padding: selected ? "20px 20px" : "15px 16px",
         transform: `translateX(${tx}px) translateY(${ty}px) scale(${scale}) rotateY(${ry}deg)`,
         opacity: op,
-        minHeight: selected ? 196 : 150,
+        borderWidth: selected ? 1.5 : 1,
         borderColor: selected ? medal.accent : `${medal.accent}66`,
         background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
-          ? `0 22px 54px rgba(0,0,0,0.55), 0 0 48px ${medal.glow}, inset 0 0 0 1px ${medal.accent}77`
-          : `0 14px 28px rgba(0,0,0,0.6), inset 0 0 0 1px ${medal.accent}33`,
+          ? `0 26px 64px rgba(0,0,0,0.6), 0 0 60px ${medal.glow}, inset 0 0 0 1px ${medal.accent}88`
+          : `0 16px 30px rgba(0,0,0,0.62), inset 0 0 0 1px ${medal.accent}33`,
       }}
     >
+      {/* premium top sheen on the hero card */}
+      {selected && <div aria-hidden style={St.cardSheen} />}
+
       <div style={St.medalRow}>
         <span style={{ ...St.medalPill, background: `${medal.accent}26`, color: medal.accent, borderColor: `${medal.accent}66` }}>
           {medal.label}
@@ -392,7 +398,9 @@ function PodiumCard({ path, medal, selected, offset, onSelect }) {
         )}
       </div>
 
-      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 17 : 14 }}>{path.title}</div>
+      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 19 : 14, WebkitLineClamp: selected ? 2 : 3 }}>
+        {path.title}
+      </div>
 
       {selected && path.summary && (
         <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>
@@ -487,30 +495,32 @@ const St = {
 
   // Podium carousel (native scroll-snap, dressed as coverflow)
   scroller: { position: "relative", display: "flex", flexDirection: "row", flexWrap: "nowrap",
-    alignItems: "center", justifyContent: "flex-start", height: 300, width: "100%",
+    alignItems: "center", justifyContent: "flex-start", height: 320, width: "100%",
     overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory",
-    WebkitOverflowScrolling: "touch", perspective: "1000px",
-    // calc() lets the first/last card reach centre; ~94px = half the 188px card.
+    WebkitOverflowScrolling: "touch", perspective: "1100px",
+    // calc() lets the first/last card reach centre; ~94px = half the 188px snap step.
     padding: "0 calc(50% - 94px)", margin: "4px 0",
     scrollbarWidth: "none", msOverflowStyle: "none" },
   snapItem: { flex: "0 0 188px", height: "100%", display: "flex", alignItems: "center",
     justifyContent: "center", scrollSnapAlign: "center",
-    margin: "0 -30px" }, // hard overlap so side cards tuck behind the front card
-  podCard: { position: "relative", width: 188, minHeight: 190, boxSizing: "border-box",
+    margin: "0 -40px" }, // overlap: the hero card spills over its neighbours
+  podCard: { position: "relative", width: 200, boxSizing: "border-box", overflow: "hidden",
     textAlign: "left", font: "inherit", color: C.text, cursor: "pointer", borderRadius: 22,
-    border: "1px solid", padding: "16px 16px", display: "flex", flexDirection: "column", gap: 10,
+    border: "1px solid", display: "flex", flexDirection: "column", gap: 10,
     transformOrigin: "center", backfaceVisibility: "hidden",
-    transition: "transform .34s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, opacity .3s ease, border-color .3s ease, min-height .3s ease" },
-  medalRow: { display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
+    transition: "transform .36s cubic-bezier(.2,.7,.2,1), box-shadow .3s ease, opacity .3s ease, border-color .3s ease, width .3s ease, min-height .3s ease, padding .3s ease" },
+  cardSheen: { position: "absolute", top: 0, left: 0, right: 0, height: "46%", pointerEvents: "none",
+    borderRadius: "22px 22px 0 0",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0))" },
+  medalRow: { position: "relative", zIndex: 1, display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 },
   medalPill: { fontSize: 10, fontWeight: 800, letterSpacing: 0.6, textTransform: "uppercase",
     padding: "4px 9px", borderRadius: 999, border: "1px solid" },
   podCheck: { width: 22, height: 22, borderRadius: "50%", display: "inline-flex", alignItems: "center",
     justifyContent: "center", fontSize: 12, fontWeight: 900, flex: "0 0 auto" },
-  podName: { fontWeight: 800, color: C.text, lineHeight: 1.22,
+  podName: { position: "relative", zIndex: 1, fontWeight: 800, color: C.text, lineHeight: 1.22,
     display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
-  podSummary: { fontSize: 12, color: C.dim, lineHeight: 1.4,
+  podSummary: { position: "relative", zIndex: 1, fontSize: 12.5, color: C.dim, lineHeight: 1.45,
     display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
-  podHint: { fontSize: 11, color: C.dim, letterSpacing: 0.4, marginTop: "auto", opacity: 0.8 },
 
   // Path Info
   infoCard: { background: C.card, border: `1px solid ${C.border}`, borderRadius: 20, padding: "18px 18px 16px" },
