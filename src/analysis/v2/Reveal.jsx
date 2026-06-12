@@ -251,10 +251,14 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
       <Keyframes />
 
       {/* 2: Archetype Info card */}
-      <div style={{ ...St.archCard, animation: "auroUp .5s ease both" }}>
-        <div style={{ ...St.archGlow, background: `radial-gradient(120% 80% at 50% 0%, ${sty.accent}1f, transparent 70%)` }} />
+      <div style={{ ...St.archCard, animation: "auroUp .5s ease both", boxShadow: `inset 0 1px 0 ${sty.accent}33, inset 0 0 0 1px rgba(255,255,255,0.03), 0 16px 34px rgba(0,0,0,0.4)` }}>
+        <div style={{ ...St.archGlow, background: `radial-gradient(120% 80% at 50% 0%, ${sty.accent}22, transparent 70%)` }} />
+        <span aria-hidden style={St.scanlines} />
+        <span aria-hidden style={{ ...St.topEdge, left: 14, right: 14, background: `linear-gradient(90deg, transparent, ${sty.accent}aa 30%, ${sty.accent2} 50%, ${sty.accent}aa 70%, transparent)` }} />
+        <Corners color={sty.accent} alpha="66" />
+
         <div style={{ ...St.glyph, color: sty.accent }}>{sty.glyph}</div>
-        <div style={St.kicker}>YOUR PROFILE</div>
+        <div style={{ ...St.kicker, color: `${sty.accent}cc` }}>◢ PROFILE LOCKED</div>
         <h1 style={{ ...St.archTitle, backgroundImage: `linear-gradient(135deg, ${sty.accent2}, ${sty.accent})` }}>
           {copy.title}
         </h1>
@@ -263,7 +267,7 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
         {chips.length > 0 && (
           <div style={St.chips}>
             {chips.map((c) => (
-              <span key={c} style={{ ...St.chip, borderColor: `${sty.accent}55` }}>{c}</span>
+              <span key={c} style={{ ...St.chip, borderColor: `${sty.accent}55`, color: `${sty.accent}` }}>{c}</span>
             ))}
           </div>
         )}
@@ -412,11 +416,11 @@ function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
   // comes from scale / translate / rotate / shadow / z-index — NOT transparency.
   const ax = Math.min(Math.abs(offset), 2);   // distance from selected (0,1,2)
   const dir = offset < 0 ? 1 : -1;            // left cards shift right; right cards shift left
-  const scale = selected ? 1 : ax === 1 ? 0.82 : 0.78;
-  const tx = selected ? 0 : dir * (ax === 1 ? 22 : 40); // light tuck toward centre
-  const ty = selected ? 0 : 20 + ax * 10;               // sit lower → podium silhouette
-  const ry = selected ? 0 : dir * (ax === 1 ? 20 : 26); // coverflow tilt (parent has perspective)
-  const op = selected ? 1 : ax === 1 ? 0.97 : 0.92;     // stay solid, never ghosted
+  const scale = selected ? 1 : ax === 1 ? 0.85 : 0.81;
+  const tx = selected ? 0 : dir * (ax === 1 ? 16 : 30); // lighter tuck → side cards peek more
+  const ty = selected ? 0 : 18 + ax * 8;                // sit lower → podium silhouette
+  const ry = selected ? 0 : dir * (ax === 1 ? 16 : 22); // gentler tilt → side titles stay readable
+  const op = selected ? 1 : ax === 1 ? 0.98 : 0.94;     // stay solid, never ghosted
 
   return (
     <button
@@ -425,9 +429,10 @@ function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
       aria-pressed={selected}
       style={{
         ...St.podCard,
-        width: selected ? 250 : 204,
-        minHeight: selected ? 216 : 158,
-        padding: selected ? "16px 17px 17px" : "13px 14px 14px",
+        width: selected ? 252 : 208,
+        minHeight: selected ? 224 : 166,
+        padding: selected ? "19px 20px 20px" : "14px 15px 15px",
+        gap: selected ? 10 : 8,
         borderRadius: selected ? "16px 16px 16px 6px" : "13px 13px 13px 5px",
         transform: `translateX(${tx}px) translateY(${ty}px) scale(${scale}) rotateY(${ry}deg)`,
         opacity: op,
@@ -568,32 +573,36 @@ const St = {
     transform: "translate(-50%,-50%)", animation: "auroBreath 1s ease-in-out infinite" },
 
   // Archetype card
-  archCard: { position: "relative", overflow: "hidden", background: C.card,
-    border: `1px solid ${C.border}`, borderRadius: 22, padding: "26px 22px", textAlign: "center" },
-  archGlow: { position: "absolute", inset: 0, pointerEvents: "none" },
-  glyph: { position: "relative", fontSize: 30, marginBottom: 8, lineHeight: 1 },
-  kicker: { position: "relative", letterSpacing: 4, fontSize: 11, color: C.dim, fontWeight: 700, marginBottom: 6 },
-  archTitle: { position: "relative", fontSize: 34, fontWeight: 900, margin: "0 0 12px", lineHeight: 1.1,
+  archCard: { position: "relative", overflow: "hidden", background:
+      "radial-gradient(120% 60% at 50% 0%, rgba(255,255,255,0.03), transparent 60%)," +
+      "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.015))",
+    border: `1px solid ${C.border}`, borderRadius: "6px 22px 22px 22px", padding: "26px 22px", textAlign: "center" },
+  archGlow: { position: "absolute", inset: 0, pointerEvents: "none", zIndex: 0 },
+  glyph: { position: "relative", zIndex: 2, fontSize: 30, marginBottom: 8, lineHeight: 1 },
+  kicker: { position: "relative", zIndex: 2, letterSpacing: 3, fontSize: 10, fontWeight: 800, marginBottom: 8,
+    fontFamily: "ui-monospace, Menlo, monospace" },
+  archTitle: { position: "relative", zIndex: 2, fontSize: 34, fontWeight: 900, margin: "0 0 12px", lineHeight: 1.1,
     WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  identity: { position: "relative", fontSize: 16.5, fontWeight: 650, color: C.text, margin: "0 0 12px", lineHeight: 1.35 },
-  mirror: { position: "relative", fontSize: 14.5, color: C.dim, lineHeight: 1.55, margin: 0 },
-  chips: { position: "relative", display: "flex", flexWrap: "wrap", gap: 8, justifyContent: "center", marginTop: 18 },
-  chip: { fontSize: 12, padding: "5px 11px", borderRadius: 999, border: "1px solid",
-    color: C.text, background: "rgba(255,255,255,0.03)" },
+  identity: { position: "relative", zIndex: 2, fontSize: 16.5, fontWeight: 650, color: C.text, margin: "0 0 12px", lineHeight: 1.35 },
+  mirror: { position: "relative", zIndex: 2, fontSize: 14.5, color: "rgba(245,246,250,0.74)", lineHeight: 1.55, margin: 0 },
+  chips: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 7, justifyContent: "center", marginTop: 18 },
+  chip: { fontSize: 11, fontWeight: 650, letterSpacing: 0.3, padding: "5px 10px", borderRadius: 4, border: "1px solid",
+    background: "rgba(255,255,255,0.03)" },
 
   sectionHead: { display: "flex", alignItems: "center", gap: 12, margin: "8px 6px 0" },
-  sectionRule: { flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)" },
-  sectionText: { fontSize: 10, letterSpacing: 3, color: C.dim, fontWeight: 800, fontFamily: "ui-monospace, Menlo, monospace" },
+  sectionRule: { flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.16), transparent)" },
+  sectionText: { fontSize: 10, letterSpacing: 3, color: "rgba(245,246,250,0.6)", fontWeight: 800, fontFamily: "ui-monospace, Menlo, monospace" },
 
   // Podium atmosphere + carousel (native scroll-snap, dressed as coverflow)
   stageWrap: { position: "relative", width: "100%" },
-  atmosphere: { position: "absolute", inset: "-12% -8% -4%", pointerEvents: "none", zIndex: 0,
+  atmosphere: { position: "absolute", inset: "-14% -10% -6%", pointerEvents: "none", zIndex: 0,
     background:
-      "radial-gradient(58% 50% at 50% 42%, rgba(245,200,66,0.07), transparent 70%)," +
-      "repeating-linear-gradient(0deg, rgba(255,255,255,0.016) 0 1px, transparent 1px 4px)," +
-      "radial-gradient(120% 86% at 50% 50%, transparent 52%, rgba(0,0,0,0.55) 100%)" },
+      "radial-gradient(62% 56% at 50% 38%, rgba(245,200,66,0.12), transparent 72%)," +
+      "radial-gradient(80% 60% at 50% 8%, rgba(255,255,255,0.05), transparent 60%)," +
+      "repeating-linear-gradient(0deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 4px)," +
+      "radial-gradient(120% 88% at 50% 52%, transparent 56%, rgba(0,0,0,0.42) 100%)" },
   scroller: { position: "relative", zIndex: 1, display: "flex", flexDirection: "row", flexWrap: "nowrap",
-    alignItems: "center", justifyContent: "flex-start", height: 320, width: "100%",
+    alignItems: "center", justifyContent: "flex-start", height: 326, width: "100%",
     overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory",
     WebkitOverflowScrolling: "touch", perspective: "1100px",
     // calc() lets the first/last card reach centre; ~94px = half the 188px snap step.
@@ -601,7 +610,7 @@ const St = {
     scrollbarWidth: "none", msOverflowStyle: "none" },
   snapItem: { flex: "0 0 188px", height: "100%", display: "flex", alignItems: "center",
     justifyContent: "center", scrollSnapAlign: "center",
-    margin: "0 -26px" }, // gentle overlap: side cards stay clearly visible behind the hero
+    margin: "0 -18px" }, // lighter overlap: side cards stay clearly readable behind the hero
   podCard: { position: "relative", width: 200, boxSizing: "border-box", overflow: "hidden",
     textAlign: "left", font: "inherit", color: C.text, cursor: "pointer",
     border: "1px solid", display: "flex", flexDirection: "column", gap: 7,
