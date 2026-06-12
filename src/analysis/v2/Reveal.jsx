@@ -248,8 +248,8 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
       <div style={St.sectionHead}>Choose your path</div>
       <Podium top3={top3} selectedIndex={safeIndex} onSelect={setSelectedIndex} />
 
-      {/* 4: Path Info */}
-      {selectedPath && <PathInfo path={selectedPath} medal={MEDAL[safeIndex]} />}
+      {/* 4: Path Info — keyed so it lightly re-animates when the selection changes */}
+      {selectedPath && <PathInfo key={selectedPath.id} path={selectedPath} medal={MEDAL[safeIndex]} />}
 
       {/* 5: CTA */}
       {selectedPath && (
@@ -259,8 +259,12 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
             backgroundImage: `linear-gradient(135deg, ${MEDAL[safeIndex].accent2}, ${MEDAL[safeIndex].accent})`,
           }}
           onClick={() => onContinue(selectedPath)}
+          onPointerDown={(e) => { e.currentTarget.style.transform = "scale(0.985)"; }}
+          onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+          onPointerLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
         >
-          Begin {selectedPath.title} Path
+          <span aria-hidden style={St.ctaSheen} />
+          <span style={St.ctaLabel}>Begin {selectedPath.title} Path</span>
         </button>
       )}
       <div style={St.ctaSub}>You can explore the other paths anytime.</div>
@@ -357,14 +361,15 @@ function Podium({ top3, selectedIndex, onSelect }) {
 function PodiumCard({ path, medal, selected, offset, onSelect }) {
   // Transform applied to the BUTTON only (wrapper stays untransformed so the
   // scroll-snap centring math is unaffected). The selected card is a wide hero;
-  // the others scale down, drop lower, tilt back and tuck behind it.
+  // the others stay solid but sit smaller, lower, tilted and behind it. Depth
+  // comes from scale / translate / rotate / shadow / z-index — NOT transparency.
   const ax = Math.min(Math.abs(offset), 2);   // distance from selected (0,1,2)
   const dir = offset < 0 ? 1 : -1;            // left cards shift right; right cards shift left
-  const scale = selected ? 1 : ax === 1 ? 0.74 : 0.62;
-  const tx = selected ? 0 : dir * (ax === 1 ? 34 : 58); // extra tuck toward centre (overlap)
-  const ty = selected ? 0 : 24 + ax * 14;               // sit lower → podium silhouette
-  const ry = selected ? 0 : dir * (ax === 1 ? 26 : 34); // coverflow tilt (parent has perspective)
-  const op = selected ? 1 : ax === 1 ? 0.72 : 0.46;
+  const scale = selected ? 1 : ax === 1 ? 0.82 : 0.78;
+  const tx = selected ? 0 : dir * (ax === 1 ? 22 : 40); // light tuck toward centre
+  const ty = selected ? 0 : 20 + ax * 10;               // sit lower → podium silhouette
+  const ry = selected ? 0 : dir * (ax === 1 ? 20 : 26); // coverflow tilt (parent has perspective)
+  const op = selected ? 1 : ax === 1 ? 0.96 : 0.9;      // stay solid, never ghosted
 
   return (
     <button
@@ -373,17 +378,21 @@ function PodiumCard({ path, medal, selected, offset, onSelect }) {
       aria-pressed={selected}
       style={{
         ...St.podCard,
-        width: selected ? 248 : 200,
-        minHeight: selected ? 212 : 150,
-        padding: selected ? "20px 20px" : "15px 16px",
+        width: selected ? 248 : 202,
+        minHeight: selected ? 212 : 156,
+        padding: selected ? "20px 20px" : "16px 16px",
         transform: `translateX(${tx}px) translateY(${ty}px) scale(${scale}) rotateY(${ry}deg)`,
         opacity: op,
         borderWidth: selected ? 1.5 : 1,
-        borderColor: selected ? medal.accent : `${medal.accent}66`,
+        borderColor: selected ? medal.accent : `${medal.accent}77`,
         background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
-          ? `0 26px 64px rgba(0,0,0,0.6), 0 0 60px ${medal.glow}, inset 0 0 0 1px ${medal.accent}88`
-          : `0 16px 30px rgba(0,0,0,0.62), inset 0 0 0 1px ${medal.accent}33`,
+          ? `0 26px 64px rgba(0,0,0,0.6), 0 0 46px ${medal.glow}, inset 0 0 0 1px ${medal.accent}88`
+          : `0 16px 30px rgba(0,0,0,0.62), inset 0 0 0 1px ${medal.accent}44`,
+        // breathing glow on the hero only (calm, ~3.4s)
+        ...(selected
+          ? { "--glow": medal.glow, "--ring": `${medal.accent}88`, animation: "auroGlow 3.4s ease-in-out infinite" }
+          : null),
       }}
     >
       {/* premium top sheen on the hero card */}
@@ -398,7 +407,7 @@ function PodiumCard({ path, medal, selected, offset, onSelect }) {
         )}
       </div>
 
-      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 19 : 14, WebkitLineClamp: selected ? 2 : 3 }}>
+      <div style={{ ...St.podName, color: medal.title, fontSize: selected ? 19 : 14.5, WebkitLineClamp: selected ? 2 : 3 }}>
         {path.title}
       </div>
 
@@ -420,7 +429,7 @@ function PathInfo({ path, medal }) {
   const chips = reasonChips(path);
 
   return (
-    <div style={{ ...St.infoCard, animation: "auroUp .35s ease both" }}>
+    <div style={{ ...St.infoCard, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
       <div style={St.infoKicker}>PATH DETAIL</div>
       <h2 style={{ ...St.infoTitle, backgroundImage: `linear-gradient(135deg, ${medal.accent2}, ${medal.accent})` }}>
         {path.title}
@@ -460,6 +469,12 @@ function Keyframes() {
       @keyframes auroUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes auroSpin2 { to { transform: rotate(360deg); } }
       @keyframes auroBreath { 0%,100% { opacity: .5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
+      @keyframes auroGlow {
+        0%,100% { box-shadow: 0 26px 64px rgba(0,0,0,0.6), 0 0 34px var(--glow), inset 0 0 0 1px var(--ring); }
+        50%     { box-shadow: 0 26px 64px rgba(0,0,0,0.6), 0 0 66px var(--glow), inset 0 0 0 1px var(--ring); }
+      }
+      @keyframes auroInfoIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes auroSheen { 0% { transform: translateX(-140%) skewX(-18deg); } 55%,100% { transform: translateX(360%) skewX(-18deg); } }
       .auroScroller::-webkit-scrollbar { display: none; height: 0; }
     `}</style>
   );
@@ -503,7 +518,7 @@ const St = {
     scrollbarWidth: "none", msOverflowStyle: "none" },
   snapItem: { flex: "0 0 188px", height: "100%", display: "flex", alignItems: "center",
     justifyContent: "center", scrollSnapAlign: "center",
-    margin: "0 -40px" }, // overlap: the hero card spills over its neighbours
+    margin: "0 -26px" }, // gentle overlap: side cards stay clearly visible behind the hero
   podCard: { position: "relative", width: 200, boxSizing: "border-box", overflow: "hidden",
     textAlign: "left", font: "inherit", color: C.text, cursor: "pointer", borderRadius: 22,
     border: "1px solid", display: "flex", flexDirection: "column", gap: 10,
@@ -536,9 +551,14 @@ const St = {
     border: "1px solid", background: "rgba(255,255,255,0.02)" },
 
   // CTA
-  cta: { width: "100%", padding: "16px 20px", borderRadius: 16, border: "none",
-    fontWeight: 800, fontSize: 16, color: "#0a0b10", cursor: "pointer", marginTop: 6,
-    transition: "filter .15s ease" },
+  cta: { position: "relative", overflow: "hidden", width: "100%", padding: "16px 20px",
+    borderRadius: 16, border: "none", fontWeight: 800, fontSize: 16, color: "#0a0b10",
+    cursor: "pointer", marginTop: 6, transform: "scale(1)",
+    transition: "transform .14s ease, filter .15s ease" },
+  ctaLabel: { position: "relative", zIndex: 1 },
+  ctaSheen: { position: "absolute", top: 0, bottom: 0, left: 0, width: "38%", zIndex: 0, pointerEvents: "none",
+    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.45), transparent)",
+    animation: "auroSheen 5.5s ease-in-out infinite" },
   ctaSub: { fontSize: 12, color: C.dim, textAlign: "center" },
   debugBtn: { width: "100%", marginTop: 6, padding: "9px 12px", borderRadius: 10,
     border: `1px dashed ${C.border}`, background: "transparent", color: C.dim,
