@@ -56,6 +56,115 @@ import {
 
 // ── App shell ─────────────────────────────────────────────────────────────────
 
+// ── Auro Opening Animation ─────────────────────────────────────────────────────
+// Premium "career OS booting" reveal: logo in pulsing gold/blue rings, an AURO
+// wordmark that resolves in, and cycling calibration microcopy, then a soft fade
+// into AnalysisV2. Plays once per app load (driven by App state). Reuses theme
+// colors (T) and the existing Auro icon (ICON_B64). Respects reduced-motion.
+const AURO_STATUS = ["Initializing signal", "Mapping ambition", "Calibrating path"];
+
+function AuroOpeningAnimation() {
+  const [statusIndex, setStatusIndex] = useState(0);
+  const [exiting, setExiting] = useState(false);
+
+  useEffect(() => {
+    const reduce = typeof window !== "undefined" && window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduce) {
+      setStatusIndex(AURO_STATUS.length - 1); // show final line, no cycling
+      const fade = setTimeout(() => setExiting(true), 500);
+      return () => clearTimeout(fade);
+    }
+    const a = setTimeout(() => setStatusIndex(1), 700);
+    const b = setTimeout(() => setStatusIndex(2), 1400);
+    const fade = setTimeout(() => setExiting(true), 1900); // begin fade before unmount
+    return () => { clearTimeout(a); clearTimeout(b); clearTimeout(fade); };
+  }, []);
+
+  return (
+    <div
+      className="auro-overlay"
+      role="status"
+      aria-label="Auro is starting"
+      style={{ opacity: exiting ? 0 : 1, transition: "opacity .4s ease" }}
+    >
+      <style>{`
+        .auro-overlay{ position:fixed; inset:0; z-index:10000; display:flex; align-items:center; justify-content:center; overflow:hidden;
+          background:
+            radial-gradient(58% 48% at 50% 42%, ${T.gold}16, transparent 60%),
+            radial-gradient(54% 44% at 50% 60%, ${T.primary}14, transparent 62%),
+            ${T.gradHero}; }
+        .auro-grid{ position:absolute; inset:0; pointer-events:none; opacity:.45;
+          background-image:
+            linear-gradient(${T.border}33 1px, transparent 1px),
+            linear-gradient(90deg, ${T.border}33 1px, transparent 1px);
+          background-size:46px 46px;
+          -webkit-mask-image:radial-gradient(58% 58% at 50% 45%, #000 0%, transparent 74%);
+          mask-image:radial-gradient(58% 58% at 50% 45%, #000 0%, transparent 74%); }
+        .auro-stage{ position:relative; z-index:2; display:flex; flex-direction:column; align-items:center; gap:22px; padding:24px; }
+        .auro-ringwrap{ position:relative; width:108px; height:108px; display:flex; align-items:center; justify-content:center; }
+        .auro-ring{ position:absolute; inset:0; border-radius:50%; border:1.5px solid; }
+        .auro-ring-gold{ border-color:${T.gold}66; animation:auroRing 2.2s ease-out infinite; }
+        .auro-ring-blue{ border-color:${T.primary}66; animation:auroRing 2.2s ease-out .55s infinite; }
+        .auro-disc{ position:relative; width:72px; height:72px; border-radius:22px; display:flex; align-items:center; justify-content:center;
+          background:linear-gradient(160deg, ${T.card}, ${T.surface}); border:1px solid ${T.border};
+          box-shadow: inset 0 1px 0 ${T.gold}33, 0 10px 30px rgba(0,0,0,.5), 0 0 34px ${T.gold}22;
+          animation:auroDisc 3.4s ease-in-out infinite; }
+        .auro-disc img{ width:46px; height:46px; object-fit:contain; filter:drop-shadow(0 2px 6px rgba(0,0,0,.5)); }
+        .auro-word{ display:flex; gap:.04em; font-weight:900; font-size:34px; letter-spacing:.22em; padding-left:.22em;
+          background:linear-gradient(110deg, ${T.gold}, ${T.text} 55%, ${T.primary});
+          -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
+        .auro-letter{ opacity:0; transform:translateY(12px); animation:auroLetter .6s cubic-bezier(.2,.7,.2,1) forwards; }
+        .auro-letter:nth-child(1){ animation-delay:.12s } .auro-letter:nth-child(2){ animation-delay:.21s }
+        .auro-letter:nth-child(3){ animation-delay:.30s } .auro-letter:nth-child(4){ animation-delay:.39s }
+        .auro-status{ display:flex; align-items:center; gap:9px; min-height:18px; }
+        .auro-dot{ width:6px; height:6px; border-radius:50%; background:${T.gold}; box-shadow:0 0 8px ${T.gold}; animation:auroDot 1.1s ease-in-out infinite; }
+        .auro-statustext{ font-size:12.5px; letter-spacing:.18em; text-transform:uppercase; color:${T.muted}; font-weight:600; animation:auroStatusIn .42s ease both; }
+        .auro-hairline{ position:relative; width:150px; height:2px; border-radius:2px; background:${T.dim}; overflow:hidden; }
+        .auro-hairline-fill{ position:absolute; inset:0 auto 0 0; width:0; border-radius:2px; background:linear-gradient(90deg, ${T.gold}, ${T.primary}); animation:auroFill 2.1s ease-in-out forwards; }
+        @keyframes auroRing{ 0%{transform:scale(.62); opacity:.55} 70%{opacity:.12} 100%{transform:scale(1.18); opacity:0} }
+        @keyframes auroDisc{ 0%,100%{box-shadow:inset 0 1px 0 ${T.gold}33, 0 10px 30px rgba(0,0,0,.5), 0 0 30px ${T.gold}1f} 50%{box-shadow:inset 0 1px 0 ${T.gold}55, 0 10px 30px rgba(0,0,0,.5), 0 0 48px ${T.gold}3a} }
+        @keyframes auroLetter{ to{ opacity:1; transform:none } }
+        @keyframes auroDot{ 0%,100%{opacity:.35; transform:scale(.8)} 50%{opacity:1; transform:scale(1)} }
+        @keyframes auroStatusIn{ from{opacity:0; transform:translateY(4px)} to{opacity:1; transform:none} }
+        @keyframes auroFill{ 0%{width:0} 100%{width:100%} }
+        @media (prefers-reduced-motion: reduce){
+          .auro-ring{ animation:none!important; opacity:0!important; }
+          .auro-disc{ animation:none!important; }
+          .auro-letter{ animation:none!important; opacity:1!important; transform:none!important; }
+          .auro-dot{ animation:none!important; opacity:1!important; }
+          .auro-statustext{ animation:none!important; }
+          .auro-hairline-fill{ animation:none!important; width:100%!important; }
+        }
+      `}</style>
+
+      <div className="auro-grid" aria-hidden="true" />
+      <div className="auro-stage">
+        <div className="auro-ringwrap" aria-hidden="true">
+          <span className="auro-ring auro-ring-gold" />
+          <span className="auro-ring auro-ring-blue" />
+          <div className="auro-disc">
+            <img src={`data:image/png;base64,${ICON_B64}`} alt="" />
+          </div>
+        </div>
+
+        <div className="auro-word" aria-label="AURO">
+          {"AURO".split("").map((ch, i) => (
+            <span key={i} className="auro-letter">{ch}</span>
+          ))}
+        </div>
+
+        <div className="auro-status">
+          <span className="auro-dot" aria-hidden="true" />
+          <span key={statusIndex} className="auro-statustext">{AURO_STATUS[statusIndex]}</span>
+        </div>
+
+        <div className="auro-hairline" aria-hidden="true"><span className="auro-hairline-fill" /></div>
+      </div>
+    </div>
+  );
+}
+
 // ── Email Verification Screen ──────────────────────────────────────────────────
 // Used inline for nav-tracking / nav-chat when emailVerified is false.
 // Calls real Firebase reload before checking — no fake timeouts.
@@ -2574,6 +2683,14 @@ export default function App() {
   // Analysis gate: until AnalysisV2 is completed (or dev-bypassed), no other
   // page or nav is reachable. Defaults false so the app always opens into analysis.
   const [analysisGatePassed, setAnalysisGatePassed] = useState(false);
+  // Opening animation: plays once per app load, before the analysis page shows.
+  const [showOpeningAnimation, setShowOpeningAnimation] = useState(true);
+  useEffect(() => {
+    const reduce = typeof window !== "undefined" && window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const timer = setTimeout(() => setShowOpeningAnimation(false), reduce ? 900 : 2200);
+    return () => clearTimeout(timer);
+  }, []); // empty deps → runs once, not on every state change
   const [qIndex, setQIndex] = useState(0);
   const [questions, setQuestions] = useState([]);
 
@@ -2788,6 +2905,10 @@ export default function App() {
   // other page are withheld until the gate passes. Auth + email-verification gates
   // run first, so that behaviour is fully preserved.
   if (!analysisGatePassed) {
+    // Iconic opening animation plays first, then fades into AnalysisV2.
+    if (showOpeningAnimation) {
+      return <AuroOpeningAnimation />;
+    }
     return (
       <>
         <AnalysisV2
