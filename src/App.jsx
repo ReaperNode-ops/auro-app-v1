@@ -2532,38 +2532,40 @@ function SplashLoader() {
 }
 
 // ── Auro brand mark (vector recreation of the icon) ────────────────────────
-// Inline SVG recreation of the Auro emblem: a gold "A" (two legs + crossbar +
-// centre dot) inside a ring that runs gold around the top/left and electric
-// blue at the lower-right. Vector, so it stays crisp when scaled massively —
-// the intro zooms THIS, never the raster ICON_B64.
+// Inline SVG rebuilt to match the real Auro emblem: a bold gold "A" (sharp
+// apex, thick legs, crossbar + centre dot) inside an OPEN ring that runs gold
+// down the left/bottom and electric blue down the right, broken at the top
+// where the apex pushes through. Vector, so it stays crisp at any zoom — the
+// intro scales THIS, never the raster ICON_B64.
 function AuroIntroMark({ className }) {
   return (
-    <svg className={className} viewBox="0 0 240 240" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <svg className={className} viewBox="0 0 240 240" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
       <defs>
-        <linearGradient id="auroMarkGold" x1="80" y1="58" x2="160" y2="176" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#ffe7a3" />
-          <stop offset="45%" stopColor="#f5c842" />
-          <stop offset="100%" stopColor="#e0a516" />
+        <linearGradient id="auroMarkGold" x1="76" y1="50" x2="160" y2="176" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ffe9a8" />
+          <stop offset="42%" stopColor="#f5c842" />
+          <stop offset="100%" stopColor="#d99a17" />
         </linearGradient>
-        <linearGradient id="auroMarkRing" x1="46" y1="40" x2="196" y2="204" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#f5c842" />
-          <stop offset="52%" stopColor="#f0b93a" />
-          <stop offset="76%" stopColor="#8f93d6" />
-          <stop offset="100%" stopColor="#4a9eff" />
+        <linearGradient id="auroRingGold" x1="44" y1="70" x2="150" y2="210" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ffe18a" />
+          <stop offset="55%" stopColor="#f0b32f" />
+          <stop offset="100%" stopColor="#caa224" />
         </linearGradient>
-        <filter id="auroMarkGlow" x="-25%" y="-25%" width="150%" height="150%">
-          <feGaussianBlur stdDeviation="2.4" result="b" />
-          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
-        </filter>
+        <linearGradient id="auroRingBlue" x1="206" y1="86" x2="150" y2="206" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#8ec5ff" />
+          <stop offset="45%" stopColor="#4a9eff" />
+          <stop offset="100%" stopColor="#2f74d6" />
+        </linearGradient>
       </defs>
-      {/* ring: gold around top/left, electric blue at lower-right */}
-      <circle cx="120" cy="120" r="92" stroke="url(#auroMarkRing)" strokeWidth="7" opacity="0.95" />
-      {/* the A mark + centre dot, with a subtle (static) self-glow */}
-      <g filter="url(#auroMarkGlow)">
-        <path d="M86 174 L120 58 L154 174" stroke="url(#auroMarkGold)" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" />
-        <path d="M101 147 L139 147" stroke="url(#auroMarkGold)" strokeWidth="13" strokeLinecap="round" />
-        <circle cx="120" cy="127" r="11" fill="url(#auroMarkGold)" />
-      </g>
+      {/* open ring: gold left+bottom, electric blue right, gap at top */}
+      <path d="M103 44 A80 80 0 1 0 137 200" stroke="url(#auroRingGold)" strokeWidth="9" strokeLinecap="round" />
+      <path d="M137 44 A80 80 0 0 1 137 200" stroke="url(#auroRingBlue)" strokeWidth="9" strokeLinecap="round" />
+      {/* bold A: two filled legs meeting at a sharp apex */}
+      <path d="M120 48 L106 56 L58 172 L86 172 Z" fill="url(#auroMarkGold)" />
+      <path d="M120 48 L134 56 L182 172 L154 172 Z" fill="url(#auroMarkGold)" />
+      {/* crossbar + centre dot */}
+      <path d="M95 132 L145 132 L145 145 L95 145 Z" fill="url(#auroMarkGold)" />
+      <circle cx="120" cy="139" r="13" fill="url(#auroMarkGold)" />
     </svg>
   );
 }
