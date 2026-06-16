@@ -2531,22 +2531,58 @@ function SplashLoader() {
   );
 }
 
+// ── Auro brand mark (vector recreation of the icon) ────────────────────────
+// Inline SVG recreation of the Auro emblem: a gold "A" (two legs + crossbar +
+// centre dot) inside a ring that runs gold around the top/left and electric
+// blue at the lower-right. Vector, so it stays crisp when scaled massively —
+// the intro zooms THIS, never the raster ICON_B64.
+function AuroIntroMark({ className }) {
+  return (
+    <svg className={className} viewBox="0 0 240 240" aria-hidden="true" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <linearGradient id="auroMarkGold" x1="80" y1="58" x2="160" y2="176" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#ffe7a3" />
+          <stop offset="45%" stopColor="#f5c842" />
+          <stop offset="100%" stopColor="#e0a516" />
+        </linearGradient>
+        <linearGradient id="auroMarkRing" x1="46" y1="40" x2="196" y2="204" gradientUnits="userSpaceOnUse">
+          <stop offset="0%" stopColor="#f5c842" />
+          <stop offset="52%" stopColor="#f0b93a" />
+          <stop offset="76%" stopColor="#8f93d6" />
+          <stop offset="100%" stopColor="#4a9eff" />
+        </linearGradient>
+        <filter id="auroMarkGlow" x="-25%" y="-25%" width="150%" height="150%">
+          <feGaussianBlur stdDeviation="2.4" result="b" />
+          <feMerge><feMergeNode in="b" /><feMergeNode in="SourceGraphic" /></feMerge>
+        </filter>
+      </defs>
+      {/* ring: gold around top/left, electric blue at lower-right */}
+      <circle cx="120" cy="120" r="92" stroke="url(#auroMarkRing)" strokeWidth="7" opacity="0.95" />
+      {/* the A mark + centre dot, with a subtle (static) self-glow */}
+      <g filter="url(#auroMarkGlow)">
+        <path d="M86 174 L120 58 L154 174" stroke="url(#auroMarkGold)" strokeWidth="18" strokeLinecap="round" strokeLinejoin="round" />
+        <path d="M101 147 L139 147" stroke="url(#auroMarkGold)" strokeWidth="13" strokeLinecap="round" />
+        <circle cx="120" cy="127" r="11" fill="url(#auroMarkGold)" />
+      </g>
+    </svg>
+  );
+}
+
 // ── Auro brand intro ───────────────────────────────────────────────────────
-// Signature brand-mark reveal: dark -> glow builds -> the Auro logo mark (which
-// already reads as an "A") appears large and centered, holds for recognition,
-// then the camera pushes THROUGH the mark: it scales past the screen edges as
-// blue/gold streaks intensify and a wash carries you into the app.
-// Performance: the hero logo animates ONLY transform + opacity (no filters /
-// box-shadow on the zooming element). App owns the timer (INTRO_DURATION).
+// Signature brand-mark reveal: dark -> glow builds -> the vector Auro mark
+// appears large and centred, holds for recognition, then the camera pushes
+// THROUGH the mark (it scales past the screen edges) as blue/gold streaks
+// intensify and a wash carries you into the app. Performance: the hero mark
+// animates ONLY transform + opacity (no animated filters / box-shadow on the
+// moving element). App owns the timer (INTRO_DURATION).
 function AuroOpeningAnimation({ durationMs = 5200 }) {
-  const logoSrc = ICON_B64.startsWith("data:") ? ICON_B64 : "data:image/png;base64," + ICON_B64;
   const streaks = [0, 30, 60, 90, 120, 150];
   return (
     <div className="auro-intro" style={{ position:"fixed", inset:0, zIndex:10000, background:"#000", overflow:"hidden", ["--introDur"]: durationMs + "ms" }}>
       <style>{`
         @keyframes auroIntroRoot { 0%{opacity:1} 90%{opacity:1} 100%{opacity:0} }
-        /* hero logo: transform + opacity ONLY (GPU-friendly) */
-        @keyframes auroIntroLogo {
+        /* hero mark: transform + opacity ONLY (GPU-friendly) */
+        @keyframes auroIntroMark {
           0%,12%{opacity:0; transform:translate3d(0,0,0) scale3d(.86,.86,1)}
           30%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
           40%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
@@ -2554,7 +2590,7 @@ function AuroOpeningAnimation({ durationMs = 5200 }) {
           88%{opacity:.92; transform:translate3d(0,0,0) scale3d(18,18,1)}
           100%{opacity:0; transform:translate3d(0,0,0) scale3d(24,24,1)}
         }
-        /* single soft glow layer behind the logo: opacity + transform only */
+        /* single soft glow layer behind the mark: opacity + transform only */
         @keyframes auroIntroGlow {
           0%{opacity:0; transform:translate3d(-50%,-50%,0) scale3d(.7,.7,1)}
           15%{opacity:.5}
@@ -2576,9 +2612,9 @@ function AuroOpeningAnimation({ durationMs = 5200 }) {
           background:radial-gradient(circle at 50% 50%, rgba(74,158,255,.30), transparent 46%), radial-gradient(circle at 50% 50%, rgba(245,200,66,.20), transparent 62%);
           animation: auroIntroGlow var(--introDur) ease-in-out both; }
         .auro-intro .aiStage{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
-        .auro-intro .auroIntroLogo{ width:clamp(120px,28vw,260px); height:auto; transform-origin:center center;
-          will-change:transform,opacity; backface-visibility:hidden; image-rendering:auto;
-          animation: auroIntroLogo var(--introDur) cubic-bezier(.6,.02,.2,1) both; }
+        .auro-intro .auroIntroMark{ width:clamp(120px,28vw,260px); height:clamp(120px,28vw,260px); transform-origin:center center;
+          will-change:transform,opacity; backface-visibility:hidden;
+          animation: auroIntroMark var(--introDur) cubic-bezier(.6,.02,.2,1) both; }
         .auro-intro .aiStreak{ position:absolute; top:50%; left:50%; width:120vmax; height:3px; transform:translate3d(-50%,-50%,0);
           background:linear-gradient(90deg, transparent, rgba(74,158,255,.7) 40%, rgba(245,200,66,.8) 60%, transparent 92%);
           pointer-events:none; will-change:transform,opacity; animation: auroIntroStreak var(--introDur) ease-out both; }
@@ -2588,7 +2624,7 @@ function AuroOpeningAnimation({ durationMs = 5200 }) {
 
         @media (prefers-reduced-motion: reduce){
           .auro-intro .aiStreak, .auro-intro .aiWash{ display:none !important; }
-          .auro-intro .auroIntroLogo{ animation:none !important; opacity:1 !important; transform:none !important; }
+          .auro-intro .auroIntroMark{ animation:none !important; opacity:1 !important; transform:none !important; }
           .auro-intro .aiGlow{ animation:none !important; opacity:.4 !important; transform:translate3d(-50%,-50%,0) scale3d(1,1,1) !important; }
           .auro-intro{ animation: auroIntroRoot var(--introDur) linear both; } /* gentle opacity fade only */
         }
@@ -2599,7 +2635,7 @@ function AuroOpeningAnimation({ durationMs = 5200 }) {
         <div key={r} className="aiStreak" aria-hidden style={{ ["--r"]: r + "deg" }} />
       ))}
       <div className="aiStage">
-        <img className="auroIntroLogo" src={logoSrc} alt="Auro" />
+        <AuroIntroMark className="auroIntroMark" />
       </div>
       <div className="aiWash" aria-hidden />
     </div>
