@@ -2532,72 +2532,65 @@ function SplashLoader() {
 }
 
 // ── Auro brand intro ───────────────────────────────────────────────────────
-// Signature cinematic opener: dark -> glow builds -> AURO appears large -> URO
-// dissolves -> the A pushes forward, scales past the screen edges, dissolving
-// into blue/gold light, then a wash carries you "through the A" into the app.
-// App owns the timer (INTRO_DURATION); this is pure CSS keyframes, no libs.
+// Signature brand-mark reveal: dark -> glow builds -> the Auro logo mark (which
+// already reads as an "A") appears large and centered, holds for recognition,
+// then the camera pushes THROUGH the mark: it scales past the screen edges as
+// blue/gold streaks intensify and a wash carries you into the app.
+// Performance: the hero logo animates ONLY transform + opacity (no filters /
+// box-shadow on the zooming element). App owns the timer (INTRO_DURATION).
 function AuroOpeningAnimation({ durationMs = 5200 }) {
+  const logoSrc = ICON_B64.startsWith("data:") ? ICON_B64 : "data:image/png;base64," + ICON_B64;
   const streaks = [0, 30, 60, 90, 120, 150];
   return (
     <div className="auro-intro" style={{ position:"fixed", inset:0, zIndex:10000, background:"#000", overflow:"hidden", ["--introDur"]: durationMs + "ms" }}>
       <style>{`
-        @keyframes auroIntroRoot { 0%{opacity:1} 92%{opacity:1} 100%{opacity:0} }
+        @keyframes auroIntroRoot { 0%{opacity:1} 90%{opacity:1} 100%{opacity:0} }
+        /* hero logo: transform + opacity ONLY (GPU-friendly) */
+        @keyframes auroIntroLogo {
+          0%,12%{opacity:0; transform:translate3d(0,0,0) scale3d(.86,.86,1)}
+          30%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
+          40%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
+          72%{opacity:1; transform:translate3d(0,0,0) scale3d(9,9,1)}
+          88%{opacity:.92; transform:translate3d(0,0,0) scale3d(18,18,1)}
+          100%{opacity:0; transform:translate3d(0,0,0) scale3d(24,24,1)}
+        }
+        /* single soft glow layer behind the logo: opacity + transform only */
         @keyframes auroIntroGlow {
-          0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
-          15%{opacity:.45}
-          46%{opacity:.55;transform:translate(-50%,-50%) scale(1)}
-          72%{opacity:.85;transform:translate(-50%,-50%) scale(1.5)}
-          88%{opacity:1;transform:translate(-50%,-50%) scale(2.3)}
+          0%{opacity:0; transform:translate3d(-50%,-50%,0) scale3d(.7,.7,1)}
+          15%{opacity:.5}
+          40%{opacity:.6; transform:translate3d(-50%,-50%,0) scale3d(1,1,1)}
+          72%{opacity:.85; transform:translate3d(-50%,-50%,0) scale3d(1.6,1.6,1)}
+          88%{opacity:1; transform:translate3d(-50%,-50%,0) scale3d(2.3,2.3,1)}
           100%{opacity:0}
-        }
-        @keyframes auroIntroWord { 0%,12%{opacity:0;transform:scale(.94)} 22%{opacity:1;transform:scale(1)} 100%{opacity:1;transform:scale(1)} }
-        @keyframes auroIntroRest {
-          0%,15%{opacity:0;filter:blur(0)} 24%{opacity:1} 35%{opacity:1;filter:blur(0)}
-          46%{opacity:0;filter:blur(8px);transform:translateX(10px)} 100%{opacity:0}
-        }
-        @keyframes auroIntroA {
-          0%,15%{opacity:0;transform:scale(1);filter:drop-shadow(0 0 18px rgba(74,158,255,.55)) drop-shadow(0 0 34px rgba(245,200,66,.35))}
-          24%{opacity:1;transform:scale(1)}
-          46%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 22px rgba(74,158,255,.6)) drop-shadow(0 0 40px rgba(245,200,66,.4))}
-          70%{transform:scale(7)}
-          85%{opacity:1;transform:scale(18);filter:drop-shadow(0 0 50px rgba(74,158,255,.9)) drop-shadow(0 0 110px rgba(245,200,66,.7))}
-          95%{opacity:.7;transform:scale(28)}
-          100%{opacity:0;transform:scale(34);filter:drop-shadow(0 0 90px rgba(255,255,255,.95)) drop-shadow(0 0 160px rgba(245,200,66,.6))}
         }
         @keyframes auroIntroStreak {
-          0%,46%{opacity:0;transform:translate(-50%,-50%) rotate(var(--r)) scaleX(.3)}
-          70%{opacity:.5}
-          88%{opacity:.85;transform:translate(-50%,-50%) rotate(var(--r)) scaleX(2.6)}
+          0%,40%{opacity:0; transform:translate3d(-50%,-50%,0) rotate(var(--r)) scaleX(.3)}
+          68%{opacity:.5}
+          88%{opacity:.8; transform:translate3d(-50%,-50%,0) rotate(var(--r)) scaleX(2.6)}
           100%{opacity:0}
         }
-        @keyframes auroIntroWash { 0%,80%{opacity:0} 92%{opacity:.85} 100%{opacity:0} }
+        @keyframes auroIntroWash { 0%,78%{opacity:0} 90%{opacity:.85} 100%{opacity:0} }
 
         .auro-intro{ animation: auroIntroRoot var(--introDur) ease both; }
-        .auro-intro .aiGlow{ position:absolute; top:50%; left:50%; width:60vmax; height:60vmax; transform:translate(-50%,-50%); pointer-events:none;
-          background:radial-gradient(circle at 50% 50%, rgba(74,158,255,.30), transparent 45%), radial-gradient(circle at 50% 50%, rgba(245,200,66,.22), transparent 60%);
-          filter:blur(8px); animation: auroIntroGlow var(--introDur) ease-in-out both; }
-        .auro-intro .aiWord{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
-          font-family:"Helvetica Neue", Arial, sans-serif; font-weight:900; letter-spacing:2px; line-height:1;
-          font-size:clamp(64px,18vw,180px); animation: auroIntroWord var(--introDur) ease both; }
-        .auro-intro .auroIntroA, .auro-intro .auroIntroRest{
-          background-image:linear-gradient(125deg, #4a9eff 0%, #bcd0e6 38%, #f5c842 100%);
-          -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
-        .auro-intro .auroIntroA{ display:inline-block; transform-origin:center center; will-change:transform,opacity;
-          animation: auroIntroA var(--introDur) cubic-bezier(.6,.02,.2,1) both; }
-        .auro-intro .auroIntroRest{ display:inline-block; animation: auroIntroRest var(--introDur) ease both; }
-        .auro-intro .aiStreak{ position:absolute; top:50%; left:50%; width:120vmax; height:3px; transform:translate(-50%,-50%);
-          background:linear-gradient(90deg, transparent, rgba(74,158,255,.0) 8%, rgba(74,158,255,.7) 40%, rgba(245,200,66,.8) 60%, transparent 92%);
-          pointer-events:none; filter:blur(1px); animation: auroIntroStreak var(--introDur) ease-out both; }
+        .auro-intro .aiGlow{ position:absolute; top:50%; left:50%; width:62vmax; height:62vmax; transform:translate3d(-50%,-50%,0); pointer-events:none;
+          background:radial-gradient(circle at 50% 50%, rgba(74,158,255,.30), transparent 46%), radial-gradient(circle at 50% 50%, rgba(245,200,66,.20), transparent 62%);
+          animation: auroIntroGlow var(--introDur) ease-in-out both; }
+        .auro-intro .aiStage{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
+        .auro-intro .auroIntroLogo{ width:clamp(120px,28vw,260px); height:auto; transform-origin:center center;
+          will-change:transform,opacity; backface-visibility:hidden; image-rendering:auto;
+          animation: auroIntroLogo var(--introDur) cubic-bezier(.6,.02,.2,1) both; }
+        .auro-intro .aiStreak{ position:absolute; top:50%; left:50%; width:120vmax; height:3px; transform:translate3d(-50%,-50%,0);
+          background:linear-gradient(90deg, transparent, rgba(74,158,255,.7) 40%, rgba(245,200,66,.8) 60%, transparent 92%);
+          pointer-events:none; will-change:transform,opacity; animation: auroIntroStreak var(--introDur) ease-out both; }
         .auro-intro .aiWash{ position:absolute; inset:0; pointer-events:none;
           background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.9), rgba(245,200,66,.5) 35%, transparent 70%);
           animation: auroIntroWash var(--introDur) ease-in both; }
 
         @media (prefers-reduced-motion: reduce){
           .auro-intro .aiStreak, .auro-intro .aiWash{ display:none !important; }
-          .auro-intro .aiWord, .auro-intro .auroIntroA, .auro-intro .auroIntroRest{ animation:none !important; opacity:1 !important; transform:none !important; filter:none !important; }
-          .auro-intro .aiGlow{ animation:none !important; opacity:.4 !important; transform:translate(-50%,-50%) scale(1) !important; }
-          /* keep only a gentle opacity fade-out into the app, no motion */
-          .auro-intro{ animation: auroIntroRoot var(--introDur) linear both; }
+          .auro-intro .auroIntroLogo{ animation:none !important; opacity:1 !important; transform:none !important; }
+          .auro-intro .aiGlow{ animation:none !important; opacity:.4 !important; transform:translate3d(-50%,-50%,0) scale3d(1,1,1) !important; }
+          .auro-intro{ animation: auroIntroRoot var(--introDur) linear both; } /* gentle opacity fade only */
         }
       `}</style>
 
@@ -2605,8 +2598,8 @@ function AuroOpeningAnimation({ durationMs = 5200 }) {
       {streaks.map((r) => (
         <div key={r} className="aiStreak" aria-hidden style={{ ["--r"]: r + "deg" }} />
       ))}
-      <div className="aiWord">
-        <span className="auroIntroA">A</span><span className="auroIntroRest">URO</span>
+      <div className="aiStage">
+        <img className="auroIntroLogo" src={logoSrc} alt="Auro" />
       </div>
       <div className="aiWash" aria-hidden />
     </div>
