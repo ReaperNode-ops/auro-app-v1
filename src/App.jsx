@@ -2531,84 +2531,84 @@ function SplashLoader() {
   );
 }
 
-// ── Auro opening animation ─────────────────────────────────────────────────
-// Premium "career OS booting / path calibration" reveal. Plays once per app
-// load (App controls the ~2.2s timer), then App swaps in AnalysisV2. Pure CSS
-// keyframes + theme colors, no libraries. Respects prefers-reduced-motion.
-function AuroOpeningAnimation() {
-  const logoSrc = ICON_B64.startsWith("data:") ? ICON_B64 : "data:image/png;base64," + ICON_B64;
-  const lines = [
-    { c: "l1", t: "Initializing signal" },
-    { c: "l2", t: "Mapping ambition" },
-    { c: "l3", t: "Calibrating path" },
-  ];
+// ── Auro brand intro ───────────────────────────────────────────────────────
+// Signature cinematic opener: dark -> glow builds -> AURO appears large -> URO
+// dissolves -> the A pushes forward, scales past the screen edges, dissolving
+// into blue/gold light, then a wash carries you "through the A" into the app.
+// App owns the timer (INTRO_DURATION); this is pure CSS keyframes, no libs.
+function AuroOpeningAnimation({ durationMs = 5200 }) {
+  const streaks = [0, 30, 60, 90, 120, 150];
   return (
-    <div
-      className="auro-boot"
-      style={{
-        position: "fixed", inset: 0, zIndex: 10000, background: T.gradHero,
-        display: "flex", alignItems: "center", justifyContent: "center", overflow: "hidden",
-      }}
-    >
+    <div className="auro-intro" style={{ position:"fixed", inset:0, zIndex:10000, background:"#000", overflow:"hidden", ["--introDur"]: durationMs + "ms" }}>
       <style>{`
-        @keyframes auroBootRoot { 0%{opacity:0} 7%{opacity:1} 90%{opacity:1} 100%{opacity:0} }
-        @keyframes auroBootGlow { 0%,100%{opacity:.5;transform:translate(-50%,-50%) scale(.96)} 50%{opacity:.95;transform:translate(-50%,-50%) scale(1.08)} }
-        @keyframes auroBootRing { 0%{transform:translate(-50%,-50%) scale(.55);opacity:0} 25%{opacity:.5} 100%{transform:translate(-50%,-50%) scale(1.5);opacity:0} }
-        @keyframes auroBootLogo { 0%{opacity:0;transform:scale(.82)} 100%{opacity:1;transform:scale(1)} }
-        @keyframes auroBootWord { 0%{opacity:0;letter-spacing:2px;transform:translateY(6px)} 100%{opacity:1;letter-spacing:9px;transform:translateY(0)} }
-        @keyframes auroBootLine { 0%{opacity:0;transform:translateY(6px)} 100%{opacity:1;transform:translateY(0)} }
-        @keyframes auroBootDot { 0%,100%{opacity:.35} 50%{opacity:1} }
-        .auro-boot{ animation: auroBootRoot 2.2s ease both; }
-        .auro-boot .bootGlow{ animation: auroBootGlow 2.4s ease-in-out infinite; }
-        .auro-boot .bootRing{ animation: auroBootRing 2.6s ease-out infinite; }
-        .auro-boot .bootRing2{ animation-delay:.9s; }
-        .auro-boot .bootLogo{ animation: auroBootLogo .7s cubic-bezier(.2,.7,.2,1) both; }
-        .auro-boot .bootWord{ animation: auroBootWord .8s cubic-bezier(.2,.7,.2,1) .22s both; }
-        .auro-boot .bootLine{ animation: auroBootLine .5s ease both; }
-        .auro-boot .bootLine.l1{ animation-delay:.7s; }
-        .auro-boot .bootLine.l2{ animation-delay:1.05s; }
-        .auro-boot .bootLine.l3{ animation-delay:1.4s; }
-        .auro-boot .bootDot{ animation: auroBootDot 1.1s ease-in-out infinite; }
-        @media (prefers-reduced-motion: reduce){ .auro-boot, .auro-boot *{ animation: none !important; } }
+        @keyframes auroIntroRoot { 0%{opacity:1} 92%{opacity:1} 100%{opacity:0} }
+        @keyframes auroIntroGlow {
+          0%{opacity:0;transform:translate(-50%,-50%) scale(.7)}
+          15%{opacity:.45}
+          46%{opacity:.55;transform:translate(-50%,-50%) scale(1)}
+          72%{opacity:.85;transform:translate(-50%,-50%) scale(1.5)}
+          88%{opacity:1;transform:translate(-50%,-50%) scale(2.3)}
+          100%{opacity:0}
+        }
+        @keyframes auroIntroWord { 0%,12%{opacity:0;transform:scale(.94)} 22%{opacity:1;transform:scale(1)} 100%{opacity:1;transform:scale(1)} }
+        @keyframes auroIntroRest {
+          0%,15%{opacity:0;filter:blur(0)} 24%{opacity:1} 35%{opacity:1;filter:blur(0)}
+          46%{opacity:0;filter:blur(8px);transform:translateX(10px)} 100%{opacity:0}
+        }
+        @keyframes auroIntroA {
+          0%,15%{opacity:0;transform:scale(1);filter:drop-shadow(0 0 18px rgba(74,158,255,.55)) drop-shadow(0 0 34px rgba(245,200,66,.35))}
+          24%{opacity:1;transform:scale(1)}
+          46%{opacity:1;transform:scale(1);filter:drop-shadow(0 0 22px rgba(74,158,255,.6)) drop-shadow(0 0 40px rgba(245,200,66,.4))}
+          70%{transform:scale(7)}
+          85%{opacity:1;transform:scale(18);filter:drop-shadow(0 0 50px rgba(74,158,255,.9)) drop-shadow(0 0 110px rgba(245,200,66,.7))}
+          95%{opacity:.7;transform:scale(28)}
+          100%{opacity:0;transform:scale(34);filter:drop-shadow(0 0 90px rgba(255,255,255,.95)) drop-shadow(0 0 160px rgba(245,200,66,.6))}
+        }
+        @keyframes auroIntroStreak {
+          0%,46%{opacity:0;transform:translate(-50%,-50%) rotate(var(--r)) scaleX(.3)}
+          70%{opacity:.5}
+          88%{opacity:.85;transform:translate(-50%,-50%) rotate(var(--r)) scaleX(2.6)}
+          100%{opacity:0}
+        }
+        @keyframes auroIntroWash { 0%,80%{opacity:0} 92%{opacity:.85} 100%{opacity:0} }
+
+        .auro-intro{ animation: auroIntroRoot var(--introDur) ease both; }
+        .auro-intro .aiGlow{ position:absolute; top:50%; left:50%; width:60vmax; height:60vmax; transform:translate(-50%,-50%); pointer-events:none;
+          background:radial-gradient(circle at 50% 50%, rgba(74,158,255,.30), transparent 45%), radial-gradient(circle at 50% 50%, rgba(245,200,66,.22), transparent 60%);
+          filter:blur(8px); animation: auroIntroGlow var(--introDur) ease-in-out both; }
+        .auro-intro .aiWord{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center;
+          font-family:"Helvetica Neue", Arial, sans-serif; font-weight:900; letter-spacing:2px; line-height:1;
+          font-size:clamp(64px,18vw,180px); animation: auroIntroWord var(--introDur) ease both; }
+        .auro-intro .auroIntroA, .auro-intro .auroIntroRest{
+          background-image:linear-gradient(125deg, #4a9eff 0%, #bcd0e6 38%, #f5c842 100%);
+          -webkit-background-clip:text; background-clip:text; color:transparent; -webkit-text-fill-color:transparent; }
+        .auro-intro .auroIntroA{ display:inline-block; transform-origin:center center; will-change:transform,opacity;
+          animation: auroIntroA var(--introDur) cubic-bezier(.6,.02,.2,1) both; }
+        .auro-intro .auroIntroRest{ display:inline-block; animation: auroIntroRest var(--introDur) ease both; }
+        .auro-intro .aiStreak{ position:absolute; top:50%; left:50%; width:120vmax; height:3px; transform:translate(-50%,-50%);
+          background:linear-gradient(90deg, transparent, rgba(74,158,255,.0) 8%, rgba(74,158,255,.7) 40%, rgba(245,200,66,.8) 60%, transparent 92%);
+          pointer-events:none; filter:blur(1px); animation: auroIntroStreak var(--introDur) ease-out both; }
+        .auro-intro .aiWash{ position:absolute; inset:0; pointer-events:none;
+          background:radial-gradient(circle at 50% 50%, rgba(255,255,255,.9), rgba(245,200,66,.5) 35%, transparent 70%);
+          animation: auroIntroWash var(--introDur) ease-in both; }
+
+        @media (prefers-reduced-motion: reduce){
+          .auro-intro .aiStreak, .auro-intro .aiWash{ display:none !important; }
+          .auro-intro .aiWord, .auro-intro .auroIntroA, .auro-intro .auroIntroRest{ animation:none !important; opacity:1 !important; transform:none !important; filter:none !important; }
+          .auro-intro .aiGlow{ animation:none !important; opacity:.4 !important; transform:translate(-50%,-50%) scale(1) !important; }
+          /* keep only a gentle opacity fade-out into the app, no motion */
+          .auro-intro{ animation: auroIntroRoot var(--introDur) linear both; }
+        }
       `}</style>
 
-      {/* soft gold/blue glow pulse */}
-      <div aria-hidden className="bootGlow" style={{
-        position:"absolute", top:"42%", left:"50%", width:480, height:480, transform:"translate(-50%,-50%)",
-        pointerEvents:"none", opacity:.6, filter:"blur(6px)",
-        background:`radial-gradient(circle at 50% 50%, ${T.gold}33, transparent 42%), radial-gradient(circle at 50% 50%, ${T.primary}26, transparent 62%)`,
-      }} />
-
-      {/* expanding rings */}
-      <div aria-hidden className="bootRing" style={{ position:"absolute", top:"42%", left:"50%", width:260, height:260, transform:"translate(-50%,-50%)", borderRadius:"50%", border:`1px solid ${T.gold}40`, pointerEvents:"none", opacity:0 }} />
-      <div aria-hidden className="bootRing bootRing2" style={{ position:"absolute", top:"42%", left:"50%", width:260, height:260, transform:"translate(-50%,-50%)", borderRadius:"50%", border:`1px solid ${T.primary}40`, pointerEvents:"none", opacity:0 }} />
-
-      {/* faint OS grid */}
-      <div aria-hidden style={{
-        position:"absolute", inset:0, pointerEvents:"none", opacity:.05,
-        backgroundImage:`linear-gradient(${T.text}22 1px, transparent 1px), linear-gradient(90deg, ${T.text}22 1px, transparent 1px)`,
-        backgroundSize:"38px 38px",
-        WebkitMaskImage:"radial-gradient(circle at 50% 42%, #000 0%, transparent 70%)",
-        maskImage:"radial-gradient(circle at 50% 42%, #000 0%, transparent 70%)",
-      }} />
-
-      {/* center stack */}
-      <div style={{ position:"relative", zIndex:2, display:"flex", flexDirection:"column", alignItems:"center", textAlign:"center", padding:"0 24px" }}>
-        <img className="bootLogo" src={logoSrc} alt="Auro" width={76} height={76} style={{ opacity:1, borderRadius:18, boxShadow:`0 0 34px ${T.gold}40, 0 0 0 1px ${T.border}`, marginBottom:18 }} />
-        <div className="bootWord" style={{
-          opacity:1, fontSize:34, fontWeight:900, letterSpacing:9, fontFamily:"Georgia, serif", marginBottom:20,
-          backgroundImage:`linear-gradient(120deg, ${T.gold}, ${T.primary})`,
-          WebkitBackgroundClip:"text", backgroundClip:"text", color:"transparent", WebkitTextFillColor:"transparent",
-        }}>AURO</div>
-        <div style={{ display:"flex", flexDirection:"column", gap:9, minWidth:200 }}>
-          {lines.map((line) => (
-            <div key={line.c} className={`bootLine ${line.c}`} style={{ opacity:1, display:"flex", alignItems:"center", gap:9 }}>
-              <span className="bootDot" style={{ width:6, height:6, borderRadius:"50%", background:T.gold, boxShadow:`0 0 8px ${T.gold}`, flex:"0 0 auto" }} />
-              <span style={{ fontSize:12.5, letterSpacing:1.5, color:T.muted, fontWeight:600, textTransform:"uppercase" }}>{line.t}</span>
-            </div>
-          ))}
-        </div>
+      <div className="aiGlow" aria-hidden />
+      {streaks.map((r) => (
+        <div key={r} className="aiStreak" aria-hidden style={{ ["--r"]: r + "deg" }} />
+      ))}
+      <div className="aiWord">
+        <span className="auroIntroA">A</span><span className="auroIntroRest">URO</span>
       </div>
+      <div className="aiWash" aria-hidden />
     </div>
   );
 }
@@ -2616,11 +2616,19 @@ function AuroOpeningAnimation() {
 export default function App() {
   // ── DEV: temporary analysis-gate bypass for testing other pages ─────────────
   const DEV_MODE = true; // TODO: set to false before release
+  const INTRO_DURATION = 5200; // brand intro length in ms (adjust to taste)
   // ── Firebase auth state ────────────────────────────────────────────────────
   // "loading" → "unauthenticated" → "unverified" → "authenticated"
   // "unverified" = signed in but emailVerified === false; blocks app access
   const [authState, setAuthState] = useState("loading");
   const [firebaseUser, setFirebaseUser] = useState(null);
+
+  // Brand intro: plays once per app load/refresh, before everything else.
+  const [showOpeningAnimation, setShowOpeningAnimation] = useState(true);
+  useEffect(() => {
+    const timer = setTimeout(() => setShowOpeningAnimation(false), INTRO_DURATION);
+    return () => clearTimeout(timer);
+  }, []);
 
   useEffect(() => {
     const unsub = onAuthChange(async (user) => {
@@ -2656,12 +2664,6 @@ export default function App() {
   // Analysis gate: until AnalysisV2 is completed (or dev-bypassed), no other
   // page or nav is reachable. Defaults false so the app always opens into analysis.
   const [analysisGatePassed, setAnalysisGatePassed] = useState(false);
-  // Opening animation: plays once per app load, before AnalysisV2 is shown.
-  const [showOpeningAnimation, setShowOpeningAnimation] = useState(true);
-  useEffect(() => {
-    const timer = setTimeout(() => setShowOpeningAnimation(false), 2200);
-    return () => clearTimeout(timer);
-  }, []);
   const [qIndex, setQIndex] = useState(0);
   const [questions, setQuestions] = useState([]);
 
@@ -2830,6 +2832,11 @@ export default function App() {
     if (dest) setSubScreen(dest);
   };
 
+  // ── Brand intro ─ plays FIRST: before auth/verification/analysis/shell ──────
+  if (showOpeningAnimation) {
+    return <AuroOpeningAnimation durationMs={INTRO_DURATION} />;
+  }
+
   // ── Auth gate ──────────────────────────────────────────────────────────────
   if (authState === "loading") return <SplashLoader />;
   if (authState === "unauthenticated") {
@@ -2876,10 +2883,6 @@ export default function App() {
   // other page are withheld until the gate passes. Auth + email-verification gates
   // run first, so that behaviour is fully preserved.
   if (!analysisGatePassed) {
-    // Opening animation plays first (once per load), then AnalysisV2.
-    if (showOpeningAnimation) {
-      return <AuroOpeningAnimation />;
-    }
     return (
       <>
         <AnalysisV2
