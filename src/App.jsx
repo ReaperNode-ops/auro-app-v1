@@ -2532,6 +2532,8 @@ function SplashLoader() {
 }
 
 export default function App() {
+  // ── DEV: temporary analysis-gate bypass for testing other pages ─────────────
+  const DEV_MODE = true; // TODO: set to false before release
   // ── Firebase auth state ────────────────────────────────────────────────────
   // "loading" → "unauthenticated" → "unverified" → "authenticated"
   // "unverified" = signed in but emailVerified === false; blocks app access
@@ -2569,6 +2571,9 @@ export default function App() {
   // ── Quiz / screen state ────────────────────────────────────────────────────
   const [screen, setScreen] = useState("landing");
   const [answers, setAnswers] = useState({});
+  // Analysis gate: until AnalysisV2 is completed (or dev-bypassed), no other
+  // page or nav is reachable. Defaults false so the app always opens into analysis.
+  const [analysisGatePassed, setAnalysisGatePassed] = useState(false);
   const [qIndex, setQIndex] = useState(0);
   const [questions, setQuestions] = useState([]);
 
@@ -2645,6 +2650,12 @@ export default function App() {
     } else {
       setScreen(tab.screen);
     }
+  };
+
+  // DEV-only: skip the analysis gate and jump straight to tracking for testing.
+  const devBypassAnalysis = () => {
+    setAnalysisGatePassed(true);
+    setScreen("nav-tracking");
   };
 
   // ── App-wide shared state ─────────────────────────────────────────────────────
@@ -2768,6 +2779,47 @@ export default function App() {
           setAuthState("unauthenticated");
         }}
       />
+    );
+  }
+
+  // ── Analysis gate ───────────────────────────────────────────────────────────
+  // Authenticated (and verified, per the gates above), but analysis not finished:
+  // AnalysisV2 is the ONLY thing rendered — the app shell, bottom nav, and every
+  // other page are withheld until the gate passes. Auth + email-verification gates
+  // run first, so that behaviour is fully preserved.
+  if (!analysisGatePassed) {
+    return (
+      <>
+        <AnalysisV2
+          onComplete={(legacyAnswers) => {
+            setAnswers(legacyAnswers);    // existing: feed the result into Tracking
+            setAnalysisGatePassed(true);  // mark the gate as passed
+            setScreen("nav-tracking");    // route to tracking
+          }}
+          onExit={() => setScreen("landing")}
+        />
+        {DEV_MODE && (
+          <button
+            onClick={devBypassAnalysis}
+            style={{
+              position: "fixed",
+              bottom: 16,
+              right: 16,
+              zIndex: 9999,
+              padding: "10px 14px",
+              borderRadius: 12,
+              border: "1px solid rgba(255,255,255,0.18)",
+              background: "rgba(255,255,255,0.08)",
+              color: "#fff",
+              fontSize: 13,
+              cursor: "pointer",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            Dev Bypass
+          </button>
+        )}
+      </>
     );
   }
 
