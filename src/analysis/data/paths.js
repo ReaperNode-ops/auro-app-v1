@@ -1,7 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // paths.js — the Auro path catalog.
 //
-// V2 pool: the 42 approved paths carry `v2Pool: true` and a `skillRamp` field
+// V2 pool: the 32 approved paths carry `v2Pool: true` and a `skillRamp` field
 // ("none" | "days" | "weeks" | "months" | "long"). The V2 scorer considers ONLY
 // v2Pool paths; every other entry is retained for legacy/compatibility but is
 // filtered out of normal V2 recommendations. All prior metadata (readiness,
@@ -935,9 +935,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false,
-    "skillRamp": "weeks",
-    "v2Pool": true
+    "quickCash": false
   },
   {
     "id": "etsy-seller",
@@ -1114,9 +1112,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true,
-    "skillRamp": "days",
-    "v2Pool": true
+    "quickCash": true
   },
   {
     "id": "bookkeeping",
@@ -1172,9 +1168,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": false,
-    "quickCash": false,
-    "skillRamp": "weeks",
-    "v2Pool": true
+    "quickCash": false
   },
   {
     "id": "remote-closer",
@@ -1231,9 +1225,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true,
-    "skillRamp": "days",
-    "v2Pool": true
+    "quickCash": true
   },
   {
     "id": "lead-gen",
@@ -1261,9 +1253,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false,
-    "skillRamp": "days",
-    "v2Pool": true
+    "quickCash": false
   },
   {
     "id": "recruiter",
@@ -2561,9 +2551,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true,
-    "skillRamp": "none",
-    "v2Pool": true
+    "quickCash": true
   },
   {
     "id": "house-sitting",
@@ -2591,9 +2579,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true,
-    "skillRamp": "none",
-    "v2Pool": true
+    "quickCash": true
   },
   {
     "id": "pet-sitting",
@@ -2622,9 +2608,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true,
-    "skillRamp": "none",
-    "v2Pool": true
+    "quickCash": true
   },
   {
     "id": "tutoring-younger",
@@ -2919,9 +2903,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false,
-    "skillRamp": "days",
-    "v2Pool": true
+    "quickCash": false
   },
   {
     "id": "canva-designer",
@@ -2949,9 +2931,7 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": true,
-    "quickCash": false,
-    "skillRamp": "days",
-    "v2Pool": true
+    "quickCash": false
   },
   {
     "id": "logo-social-designer",
