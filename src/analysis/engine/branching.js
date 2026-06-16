@@ -30,7 +30,7 @@ import { BANDS, DOMAIN_DECISIVE, VISIBILITY_DOMAINS } from "../data/dimensions.j
 
 // Safety ceiling — the pipeline is built to top out around 14, this just
 // guarantees the flow can never exceed the design's hard max.
-const HARD_MAX = 16;
+const HARD_MAX = 18;
 
 const visibilityRelevant = (d) => VISIBILITY_DOMAINS.includes(d.domainTop);
 
@@ -55,6 +55,7 @@ const PIPELINE = [
   { id: "motivation" },
   { id: "domain" },
   { id: "readiness" },
+  { id: "skillRamp" },
   { id: "stakes" },
   { id: "texture" },
 
