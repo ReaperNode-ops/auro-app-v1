@@ -28,6 +28,17 @@
 
 import { ALL_OPTIONS } from "../data/paths.js";
 
+// ── V2 pool: only `v2Pool` paths are eligible for V2 recommendations. Every
+//    other catalog entry is retained for legacy/compatibility but filtered out
+//    of scoreV2Paths / selectV2Result completely. ──
+const V2_POOL = ALL_OPTIONS.filter((o) => o.v2Pool === true);
+
+// ── skillRamp ordering + long-term favourites (used by the ramp scorer). ──
+const RAMP_ORDER = { none: 0, days: 1, weeks: 2, months: 3, long: 4 };
+const LONG_TERM_FAVORED = new Set([
+  "youtube", "tiktok-creator", "twitch-streamer", "dropshipping", "digital-products", "web-developer",
+]);
+
 // Which catalog tags signal membership in each V2 aptitude domain.
 const DOMAIN_TAGS = {
   technical:  ["coding/tech", "technology", "ai"],
@@ -133,6 +144,7 @@ function buildContext(derived, archetype) {
   const locality = g.locality;
   const vehicle = g.vehicle;
   const readinessGate = g.readiness;   // none | basic | proof | earned
+  const skillRamp = g.skillRamp;       // none | days | weeks | months | long
   const lifeStage = g.lifeStage;       // student | partTime | flexible | serious
   const selling = g.selling;           // avoid | scripted | pitch | direct
   const localType = g.localType;       // physical | service | cleaning | delivery | avoid
@@ -188,7 +200,7 @@ function buildContext(derived, archetype) {
 
   return {
     arche, urgency, urgencyHigh, capital, locality, vehicle,
-    readinessGate, lifeStage, selling, localType,
+    readinessGate, lifeStage, selling, localType, skillRamp,
     lowTime, highTime, zeroCap, remoteOnly, localOk,
     urgentNow, soonish,
     hasLaptop, hasCamera, hasTools, userHasVehicle, noVehicleNow,
@@ -416,6 +428,32 @@ function scoreOne(opt, c) {
   if (c.localType === "delivery" && DELIVERY_IDS.has(id) && c.userHasVehicle) doab += 20;
   if (c.localType === "avoid" && (localOnly || opt.requiresLocalAccess)) { doab -= 34; reasons.push("localType:avoid"); }
 
+  // ── skillRamp: how much learning the user will tolerate before earning. ──────
+  // delta = how much MORE ramp the path needs than the user wants. <=0 fits;
+  // >0 is penalized by distance, hardest for the most impatient users. This is
+  // what stops long-ramp paths from being recommended to "need money now" users.
+  if (c.skillRamp && RAMP_ORDER[c.skillRamp] !== undefined) {
+    const u = RAMP_ORDER[c.skillRamp];
+    const p = RAMP_ORDER[opt.skillRamp] !== undefined ? RAMP_ORDER[opt.skillRamp] : 2;
+    const delta = p - u;
+    if (delta <= 0) {
+      // within tolerance — reward paths closest to (not over) what the user will
+      // invest: impatient users favor instant paths, patient users favor the
+      // higher-ramp paths they opted into. delta 0→16, -1→12, -2→8, -3→4, -4→0.
+      doab += Math.max(0, 16 - 4 * -delta);
+      reasons.push("ramp:fits");
+    } else {
+      const per = u === 0 ? 34 : u === 1 ? 24 : u === 2 ? 16 : 10; // impatient = harsher
+      doab -= delta * per;
+      reasons.push("ramp:over" + delta);
+    }
+    // Patient users opting into upside get the long-term creator/business set lifted.
+    if ((c.skillRamp === "long" || c.skillRamp === "months") && LONG_TERM_FAVORED.has(id)) {
+      doab += c.skillRamp === "long" ? 22 : 10;
+      reasons.push("ramp:long-favored");
+    }
+  }
+
   const fitScore = Math.round(fit);
   const score = Math.max(1, Math.round(fit + doab));
   return { score, fit: fitScore, reasons };
@@ -427,7 +465,7 @@ export function scoreV2Paths(input = {}) {
   const archetype = input.archetype || arguments[1] || { key: "specialist" };
   const c = buildContext(derived, archetype);
 
-  return ALL_OPTIONS
+  return V2_POOL
     .map((opt) => {
       const { score, reasons } = scoreOne(opt, c);
       return { ...opt, score, v2Reasons: reasons };
@@ -443,7 +481,7 @@ export function selectV2Result(input = {}) {
   const archetype = input.archetype || arguments[1] || { key: "specialist" };
   const c = buildContext(derived, archetype);
 
-  const scored = ALL_OPTIONS.map((opt) => {
+  const scored = V2_POOL.map((opt) => {
     const { score, fit, reasons } = scoreOne(opt, c);
     return { ...opt, score, fit, v2Reasons: reasons };
   });
