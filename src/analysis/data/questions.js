@@ -250,6 +250,26 @@ export const QUESTIONS = {
     ],
   },
 
+  // ── skillRamp — willingness to learn a skill before expecting money. ────────
+  // Writes gates.skillRamp ("none"|"days"|"weeks"|"months"|"long"), read by the
+  // V2 scorer to stop recommending long-ramp paths to users who want money now.
+  skillRamp: {
+    type: "tap",
+    prompt: "How much time would you spend learning before you expect money?",
+    options: [
+      { id: "ramp_none",   label: "None - I need something I can start now",
+        gates: { skillRamp: "none" } },
+      { id: "ramp_days",   label: "A few days, if I can earn this week",
+        gates: { skillRamp: "days" } },
+      { id: "ramp_weeks",  label: "A few weeks, if it gives me better options",
+        gates: { skillRamp: "weeks" } },
+      { id: "ramp_months", label: "2-3 months, if it builds a real skill",
+        gates: { skillRamp: "months" } },
+      { id: "ramp_long",   label: "Long-term - I want the highest upside",
+        gates: { skillRamp: "long" } },
+    ],
+  },
+
   // ── Q14 — Schedule / life stage (new; writes both time and lifeStage) ──────
   schedule: {
     type: "tap",
