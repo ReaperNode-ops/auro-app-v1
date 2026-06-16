@@ -1,19 +1,13 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // paths.js — the Auro path catalog.
 //
-// Phase 4.6.1: each path now carries additive doability metadata (used by the
-// upcoming tiered V2 scorer; nothing reads it yet, so behaviour is unchanged):
-//   readiness          "start-now" | "learn-first" | "build-over-time"
-//   tier               "starter" | "skill-builder" | "business" | "creator" | "career" | "long-term"
-//   requiresExperience "none" | "some" | "strong"
-//   requiresAudience   boolean      requiresSelling  "low" | "medium" | "high"
-//   requiresVehicle    boolean      requiresLocalAccess boolean
-//   requiresCamera     boolean      requiresPortfolio   boolean
-//   studentFriendly    boolean      quickCash           boolean
-//
-// All original fields (id, title, summary, earnings, difficulty, timeToFirst,
-// upside, speed, tags) are unchanged. STEPS is unchanged. New beginner/starter
-// paths are appended at the end.
+// V2 pool: the 42 approved paths carry `v2Pool: true` and a `skillRamp` field
+// ("none" | "days" | "weeks" | "months" | "long"). The V2 scorer considers ONLY
+// v2Pool paths; every other entry is retained for legacy/compatibility but is
+// filtered out of normal V2 recommendations. All prior metadata (readiness,
+// tier, requiresExperience, requiresAudience, requiresSelling, requiresVehicle,
+// requiresLocalAccess, requiresCamera, requiresPortfolio, studentFriendly,
+// quickCash, speed, upside, difficulty, tags) is preserved. STEPS is unchanged.
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const ALL_OPTIONS = [
@@ -43,7 +37,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "months",
+    "v2Pool": true
   },
   {
     "id": "no-code-developer",
@@ -71,7 +67,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "months",
+    "v2Pool": true
   },
   {
     "id": "web-developer",
@@ -99,7 +97,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "months",
+    "v2Pool": true
   },
   {
     "id": "shopify-developer",
@@ -127,7 +127,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "months",
+    "v2Pool": true
   },
   {
     "id": "ui-ux-designer",
@@ -155,7 +157,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "months",
+    "v2Pool": true
   },
   {
     "id": "graphic-designer",
@@ -183,7 +187,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "motion-graphics",
@@ -212,7 +218,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "video-editor",
@@ -240,7 +248,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "thumbnail-designer",
@@ -267,7 +277,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "short-form-editor",
@@ -295,7 +307,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "seo-specialist",
@@ -323,7 +337,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "email-marketer",
@@ -634,7 +650,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": true,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "months",
+    "v2Pool": true
   },
   {
     "id": "tiktok-creator",
@@ -661,7 +679,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": true,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "months",
+    "v2Pool": true
   },
   {
     "id": "twitch-streamer",
@@ -689,7 +709,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": true,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "months",
+    "v2Pool": true
   },
   {
     "id": "ugc-creator",
@@ -718,7 +740,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": true,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "podcaster",
@@ -911,7 +935,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "etsy-seller",
@@ -939,7 +965,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "days",
+    "v2Pool": true
   },
   {
     "id": "dropshipping",
@@ -967,7 +995,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "months",
+    "v2Pool": true
   },
   {
     "id": "amazon-fba",
@@ -1053,7 +1083,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "days",
+    "v2Pool": true
   },
   {
     "id": "online-tutor",
@@ -1082,7 +1114,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "days",
+    "v2Pool": true
   },
   {
     "id": "bookkeeping",
@@ -1138,7 +1172,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "remote-closer",
@@ -1195,7 +1231,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "days",
+    "v2Pool": true
   },
   {
     "id": "lead-gen",
@@ -1223,7 +1261,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "days",
+    "v2Pool": true
   },
   {
     "id": "recruiter",
@@ -1534,7 +1574,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "dj",
@@ -1732,7 +1774,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": false,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "hair-stylist",
@@ -2017,7 +2061,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "uber-driver",
@@ -2076,7 +2122,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "days",
+    "v2Pool": true
   },
   {
     "id": "airbnb-host",
@@ -2133,7 +2181,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "car-detailer",
@@ -2448,7 +2498,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "snow-removal",
@@ -2478,7 +2530,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "babysitting",
@@ -2507,7 +2561,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "house-sitting",
@@ -2535,7 +2591,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "pet-sitting",
@@ -2564,7 +2622,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "tutoring-younger",
@@ -2649,7 +2709,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "errand-runner",
@@ -2766,7 +2828,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "sneaker-flipping",
@@ -2794,7 +2858,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "phone-flipping",
@@ -2823,7 +2889,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": true
+    "quickCash": true,
+    "skillRamp": "none",
+    "v2Pool": true
   },
   {
     "id": "social-media-helper",
@@ -2851,7 +2919,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "days",
+    "v2Pool": true
   },
   {
     "id": "canva-designer",
@@ -2879,7 +2949,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "days",
+    "v2Pool": true
   },
   {
     "id": "logo-social-designer",
@@ -3024,7 +3096,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": true,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "days",
+    "v2Pool": true
   },
   {
     "id": "resume-helper",
@@ -3253,7 +3327,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "etsy-digital",
@@ -3282,7 +3358,9 @@ export const ALL_OPTIONS = [
     "requiresCamera": false,
     "requiresPortfolio": false,
     "studentFriendly": true,
-    "quickCash": false
+    "quickCash": false,
+    "skillRamp": "weeks",
+    "v2Pool": true
   },
   {
     "id": "affiliate-shortform",
@@ -3317,89 +3395,429 @@ export const ALL_OPTIONS = [
 ];
 
 export const STEPS = {
-  "freelance-developer":["Build 3 portfolio projects on GitHub","Create profiles on Upwork and Toptal","Raise rates as reviews build"],
-  "no-code-developer":["Pick Webflow for sites or Bubble for apps","Complete their free certification","Build a free MVP for a local business"],
-  "web-developer":["Learn HTML/CSS/JS or master Webflow","Build 3 sample sites in different niches","Pitch local businesses with outdated sites"],
-  "shopify-developer":["Learn Shopify Liquid templating","Build 2 sample stores as portfolio","Join the Shopify Partner programme"],
-  "ui-ux-designer":["Master Figma through free YouTube tutorials","Redesign 3 existing apps as portfolio","Pitch startups needing a designer"],
-  "graphic-designer":["Build a portfolio of 10+ designs","Create profiles on Fiverr and 99designs","Niche into brand identity or social content"],
-  "motion-graphics":["Learn After Effects through YouTube or Motion Array","Create 5 sample animations in different styles","Target marketing agencies needing motion work"],
-  "video-editor":["Edit 3 sample videos in different styles","DM 20 creators offering a test edit","Convert happy clients to monthly packages"],
-  "thumbnail-designer":["Redesign 10 existing thumbnails as portfolio","List on Fiverr and DM mid-size YouTubers","Offer monthly packages for regular creators"],
-  "short-form-editor":["Edit 5 sample short-form videos","DM TikTok creators offering a free test edit","Package at $300–600/month for weekly content"],
-  "seo-specialist":["Learn through Ahrefs Academy — free","Do a free SEO audit for a local business","Convert it into a paid monthly retainer"],
-  "email-marketer":["Learn Klaviyo or Mailchimp through free courses","Build a sample campaign as portfolio","Pitch e-commerce brands underusing email"],
-  "copywriter":["Study fundamentals — read Ogilvy on Advertising","Rewrite 5 ads or landing pages as portfolio","Pitch brands running paid ads"],
-  "ghostwriter":["Write 10 sample LinkedIn posts in different voices","Pitch busy executives and founders","Offer a trial week before pitching a retainer"],
-  "technical-writer":["Contribute to open source project documentation","Build portfolio of sample docs and API references","Target SaaS companies on LinkedIn"],
-  "content-strategist":["Document a content strategy for a brand as portfolio","Pitch startups posting inconsistently","Package as a monthly retainer"],
-  "ai-automation":["Get certified in Make.com and Zapier — free","Build 3 automation demos solving common problems","Pitch professional services and e-commerce brands"],
-  "prompt-engineer":["Master prompting across Claude, GPT-4, and Midjourney","Document 10 use cases with results","Position on LinkedIn as an AI workflow consultant"],
-  "data-analyst":["Learn SQL and Python through Kaggle — free","Build 3 portfolio projects on public datasets","Apply for analyst roles or pitch businesses"],
-  "cybersecurity":["Study for CompTIA Security+ (3–4 months)","Practice on HackTheBox and TryHackMe","Apply for junior analyst or penetration testing roles"],
-  "it-support":["Study for CompTIA A+ certification","Offer free support to build experience","Apply to remote help desk roles on LinkedIn"],
-  "youtube":["Pick a niche you can talk about for years","Post one video per week for 3 months","Pitch sponsors once you hit 10k subscribers"],
-  "tiktok-creator":["Post 1–2 videos daily in a niche for 30 days","Study analytics to see what performs","Pitch brands directly at 5k followers"],
-  "twitch-streamer":["Stream 4–5 days per week for 3 months","Engage every viewer in chat aggressively","Apply for Twitch Affiliate at 50 avg viewers"],
-  "ugc-creator":["Create 5 sample UGC videos for products you own","Build a simple portfolio on Notion","Pitch brands on Instagram or through Billo"],
-  "podcaster":["Pick a niche, get a USB mic, record 5 episodes","Launch on Spotify for Podcasters — free","Pitch sponsors in your niche after 3 months"],
-  "newsletter":["Launch on Beehiiv or Substack — free","Write 8 issues before promoting","Grow through social media and cross-promotions"],
-  "blogger":["Pick a niche with good affiliate programmes","Publish 50+ articles on low-competition keywords","Monetise with Mediavine ads and affiliate links"],
-  "affiliate-marketer":["Join Amazon Associates or ClickBank — free","Create useful content with your affiliate links","Drive traffic through SEO, TikTok, or Pinterest"],
-  "course-creator":["Validate by asking 10 people if they would pay","Record modules with your phone and free editing tools","Launch to your network then drive traffic via social"],
-  "notion-templates":["Build 3–5 templates solving productivity problems","List on Gumroad and Etsy","Post TikTok content showing the template in use"],
-  "print-on-demand":["Open free accounts on Redbubble and Merch by Amazon","Upload 30+ designs in a consistent niche","Drive traffic via Pinterest or TikTok"],
-  "etsy-seller":["Open an Etsy shop with 10–20 listings","Optimise titles and tags for Etsy search","Drive external traffic via Pinterest"],
-  "dropshipping":["Research trending products on TikTok and AliExpress","Set up a Shopify trial store with DSers","Drive traffic via TikTok organic before paid ads"],
-  "amazon-fba":["Research products using Jungle Scout or Helium 10","Source a test batch from Alibaba","Create an optimised listing and launch with PPC"],
-  "saas-founder":["Identify a painful niche problem people pay to solve","Build an MVP using no-code or a co-founder","Launch to a small audience and iterate fast"],
-  "virtual-assistant":["List services on Fiverr, Upwork, and VA groups","Offer a free trial week to your first client","Upsell additional services as you build trust"],
-  "online-tutor":["List on Tutorful, Superprof, or MyTutor","Respond fast to enquiries","Build recurring weekly students for stable income"],
-  "bookkeeping":["Get QuickBooks or Xero certified — free","List on Upwork targeting small business owners","Land 3–5 monthly clients for recurring income"],
-  "sales-rep":["Highlight customer-facing experience on your CV","Apply for SDR roles at SaaS companies on LinkedIn","Study Challenger Sale and SPIN Selling frameworks"],
-  "remote-closer":["Study closing frameworks — Cole Gordon on YouTube","Apply to remote closing roles on LinkedIn","Track close rate to negotiate higher commission"],
-  "appointment-setter":["Apply to setter roles in Facebook groups and LinkedIn","Practice DM scripts with a mentor","Track your metrics — show rates and set rates"],
-  "lead-gen":["Learn LinkedIn Sales Navigator and Apollo.io","Offer lead lists to 3 businesses as free trial","Package as monthly retainer delivering qualified leads"],
-  "recruiter":["Pick a niche sector — tech, finance, or marketing","Connect with hiring managers on LinkedIn","Charge 15% of placed candidate annual salary"],
-  "real-estate-agent":["Get licensed through ARLA or NAEA","Join an established agency to learn the ropes","Build locally — most agents grow through referrals"],
-  "insurance-agent":["Get FCA authorised or join as appointed representative","Study life, health, or general insurance products","Build referral network with financial advisors"],
-  "event-planner":["Plan a free event for a friend or charity as portfolio","List on wedding and event directories","Partner with venues for referral business"],
-  "personal-trainer":["Get Level 3 PT qualification (REPs accredited)","Build first 5 clients through gym contacts","Transition to online coaching to scale beyond hourly"],
-  "online-fitness-coach":["Define your niche — fat loss, muscle gain, sport","Post free valuable fitness content daily","DM followers offering a free discovery call"],
-  "nutrition-coach":["Get Level 4 Nutrition or Precision Nutrition certified","Offer free consultations to first 5 clients","Package into monthly coaching retainers"],
-  "yoga-instructor":["Complete a 200-hour RYT yoga teacher training","Offer free community classes to build a following","Launch an online membership for passive income"],
-  "photographer":["Build a portfolio with discounted shoots for friends","List on Bark.com and wedding directories","Niche into real estate or product photography"],
-  "videographer":["Build portfolio with 5 sample videos","Pitch local businesses for brand video content","Target weddings for reliable seasonal income"],
-  "music-producer":["Upload best 20 beats to BeatStars with clear tags","Post beat-making content on TikTok and YouTube","Pitch catalogue to sync licensing platforms"],
-  "dj":["Practice daily and record mixes as your portfolio","Offer to play smaller venues and private events","Build relationships with promoters and venues"],
-  "illustrator":["Build portfolio of 20+ pieces with consistent style","List on 99designs and Dribbble for freelance work","Sell prints through your own Etsy shop"],
-  "voice-actor":["Set up basic home studio — USB mic (~$150)","Record demos in commercial and narration styles","List on Voices.com, Voice123, and ACX"],
-  "makeup-artist":["Complete a makeup artistry course and build your kit","Do free shoots with photographers for portfolio","List on wedding directories and promote on Instagram"],
-  "fashion-stylist":["Style friends and family free to build portfolio","Offer sessions through Instagram and word of mouth","Partner with photographers for collaborative shoots"],
-  "tattoo-artist":["Apprentice under an established artist","Build your flash sheet and post on Instagram","Build a waitlist once you have your own following"],
-  "barber":["Complete Level 2 Barbering qualification","Work in a shop to build speed and clientele","Go mobile or rent a booth to maximise earnings"],
-  "hair-stylist":["Complete NVQ Level 2/3 Hairdressing","Build Instagram portfolio with before/after photos","Move to self-employment or rent a chair"],
-  "electrician":["Complete Level 3 Electrical Installation qualification","Apprentice under a qualified electrician","Register self-employed and build your client base"],
-  "plumber":["Complete NVQ Level 2/3 in Plumbing and Heating","Get Gas Safe registered for gas work","Build local client base through Checkatrade"],
-  "carpenter":["Complete a City and Guilds carpentry qualification","Build a photo portfolio of your work","Register on Checkatrade and build through referrals"],
-  "painter-decorator":["Buy basic equipment (~$200)","Offer discounted first job for photos and reviews","List on Checkatrade and local Facebook groups"],
-  "mechanic":["Complete IMI Level 3 Vehicle Maintenance","Work at a garage to build diagnostic skills","Go mobile — invest in a van and tools"],
-  "solar-installer":["Complete MCS-approved solar installation course","Work with established installer for site experience","Get MCS accreditation and start quoting"],
-  "locksmith":["Complete a locksmith training course (~$500)","Buy a starter kit of picks and blanks","Set up Google Business profile for local visibility"],
-  "general-contractor":["Build experience working in a trade first","Get public liability insurance","Start with small jobs and scale as reputation grows"],
-  "delivery-driver":["Sign up on Deliveroo, Uber Eats, and Amazon Flex","Work peak hours for best earnings","Track mileage carefully for tax deductions"],
-  "uber-driver":["Apply for private hire licence through your local council","Register on Uber, Bolt, and Ola","Work peak times — mornings, evenings, weekends"],
-  "reseller":["Start with items you already own to test the process","Source from charity shops and Facebook Marketplace","List with good photos on eBay, Vinted, and Depop"],
-  "airbnb-host":["Create a listing with professional photos","Start with competitive pricing to build reviews","Automate check-in and cleaning for minimal effort"],
-  "dog-walker":["Get DBS checked and register on Rover and Bark.com","Offer introductory walks at a discount","Build word of mouth through vets and pet shops"],
-  "car-detailer":["Invest in starter detailing kit (~$200–$400)","Detail friends' cars free to build portfolio","List on Facebook Marketplace and build through referrals"],
-  "pressure-washing":["Buy a commercial pressure washer (~$300–$600)","Knock on doors in affluent areas","Partner with commercial property managers for contracts"],
-  "window-cleaner":["Buy basic kit — squeegees and extension pole (~$100)","Offer free first clean in residential areas","Build commercial contracts with offices and shops"],
-  "junk-removal":["Get waste carrier licence from Environment Agency ($154)","List on AnyVan, TaskRabbit, and Facebook Marketplace","Resell valuable items to increase profit margin"],
-  "stock-photos":["Create accounts on Shutterstock, Adobe Stock, and Alamy","Upload 100+ commercially useful images","Focus on business, lifestyle, and food content"],
-  "music-licensing":["Upload tracks to BeatStars and DistroKid","Create SoundCloud profile with your best work","Post production content on TikTok to attract buyers"],
-  "creator-agency":["Start as a freelancer and systematise your workflow","Hire a part-time editor or VA to handle delivery","Sign 3–5 retainer clients before scaling further"],
-  "personal-brand":["Build your own personal brand as proof of concept","Pitch busy founders and executives on LinkedIn","Offer a trial month before pitching a retainer"],
-  "growth-operator":["Build a track record in one channel first","Document results clearly — growth % and revenue driven","Pitch startups on a performance-based arrangement"],
-  "automation-specialist":["Get certified in Make.com and Zapier — free","Build 5 automation templates solving common problems","Pitch professional services and e-commerce brands"],
+  "freelance-developer": [
+    "Build 3 portfolio projects on GitHub",
+    "Create profiles on Upwork and Toptal",
+    "Raise rates as reviews build"
+  ],
+  "no-code-developer": [
+    "Pick Webflow for sites or Bubble for apps",
+    "Complete their free certification",
+    "Build a free MVP for a local business"
+  ],
+  "web-developer": [
+    "Learn HTML/CSS/JS or master Webflow",
+    "Build 3 sample sites in different niches",
+    "Pitch local businesses with outdated sites"
+  ],
+  "shopify-developer": [
+    "Learn Shopify Liquid templating",
+    "Build 2 sample stores as portfolio",
+    "Join the Shopify Partner programme"
+  ],
+  "ui-ux-designer": [
+    "Master Figma through free YouTube tutorials",
+    "Redesign 3 existing apps as portfolio",
+    "Pitch startups needing a designer"
+  ],
+  "graphic-designer": [
+    "Build a portfolio of 10+ designs",
+    "Create profiles on Fiverr and 99designs",
+    "Niche into brand identity or social content"
+  ],
+  "motion-graphics": [
+    "Learn After Effects through YouTube or Motion Array",
+    "Create 5 sample animations in different styles",
+    "Target marketing agencies needing motion work"
+  ],
+  "video-editor": [
+    "Edit 3 sample videos in different styles",
+    "DM 20 creators offering a test edit",
+    "Convert happy clients to monthly packages"
+  ],
+  "thumbnail-designer": [
+    "Redesign 10 existing thumbnails as portfolio",
+    "List on Fiverr and DM mid-size YouTubers",
+    "Offer monthly packages for regular creators"
+  ],
+  "short-form-editor": [
+    "Edit 5 sample short-form videos",
+    "DM TikTok creators offering a free test edit",
+    "Package at $300–600/month for weekly content"
+  ],
+  "seo-specialist": [
+    "Learn through Ahrefs Academy — free",
+    "Do a free SEO audit for a local business",
+    "Convert it into a paid monthly retainer"
+  ],
+  "email-marketer": [
+    "Learn Klaviyo or Mailchimp through free courses",
+    "Build a sample campaign as portfolio",
+    "Pitch e-commerce brands underusing email"
+  ],
+  "copywriter": [
+    "Study fundamentals — read Ogilvy on Advertising",
+    "Rewrite 5 ads or landing pages as portfolio",
+    "Pitch brands running paid ads"
+  ],
+  "ghostwriter": [
+    "Write 10 sample LinkedIn posts in different voices",
+    "Pitch busy executives and founders",
+    "Offer a trial week before pitching a retainer"
+  ],
+  "technical-writer": [
+    "Contribute to open source project documentation",
+    "Build portfolio of sample docs and API references",
+    "Target SaaS companies on LinkedIn"
+  ],
+  "content-strategist": [
+    "Document a content strategy for a brand as portfolio",
+    "Pitch startups posting inconsistently",
+    "Package as a monthly retainer"
+  ],
+  "ai-automation": [
+    "Get certified in Make.com and Zapier — free",
+    "Build 3 automation demos solving common problems",
+    "Pitch professional services and e-commerce brands"
+  ],
+  "prompt-engineer": [
+    "Master prompting across Claude, GPT-4, and Midjourney",
+    "Document 10 use cases with results",
+    "Position on LinkedIn as an AI workflow consultant"
+  ],
+  "data-analyst": [
+    "Learn SQL and Python through Kaggle — free",
+    "Build 3 portfolio projects on public datasets",
+    "Apply for analyst roles or pitch businesses"
+  ],
+  "cybersecurity": [
+    "Study for CompTIA Security+ (3–4 months)",
+    "Practice on HackTheBox and TryHackMe",
+    "Apply for junior analyst or penetration testing roles"
+  ],
+  "it-support": [
+    "Study for CompTIA A+ certification",
+    "Offer free support to build experience",
+    "Apply to remote help desk roles on LinkedIn"
+  ],
+  "youtube": [
+    "Pick a niche you can talk about for years",
+    "Post one video per week for 3 months",
+    "Pitch sponsors once you hit 10k subscribers"
+  ],
+  "tiktok-creator": [
+    "Post 1–2 videos daily in a niche for 30 days",
+    "Study analytics to see what performs",
+    "Pitch brands directly at 5k followers"
+  ],
+  "twitch-streamer": [
+    "Stream 4–5 days per week for 3 months",
+    "Engage every viewer in chat aggressively",
+    "Apply for Twitch Affiliate at 50 avg viewers"
+  ],
+  "ugc-creator": [
+    "Create 5 sample UGC videos for products you own",
+    "Build a simple portfolio on Notion",
+    "Pitch brands on Instagram or through Billo"
+  ],
+  "podcaster": [
+    "Pick a niche, get a USB mic, record 5 episodes",
+    "Launch on Spotify for Podcasters — free",
+    "Pitch sponsors in your niche after 3 months"
+  ],
+  "newsletter": [
+    "Launch on Beehiiv or Substack — free",
+    "Write 8 issues before promoting",
+    "Grow through social media and cross-promotions"
+  ],
+  "blogger": [
+    "Pick a niche with good affiliate programmes",
+    "Publish 50+ articles on low-competition keywords",
+    "Monetise with Mediavine ads and affiliate links"
+  ],
+  "affiliate-marketer": [
+    "Join Amazon Associates or ClickBank — free",
+    "Create useful content with your affiliate links",
+    "Drive traffic through SEO, TikTok, or Pinterest"
+  ],
+  "course-creator": [
+    "Validate by asking 10 people if they would pay",
+    "Record modules with your phone and free editing tools",
+    "Launch to your network then drive traffic via social"
+  ],
+  "notion-templates": [
+    "Build 3–5 templates solving productivity problems",
+    "List on Gumroad and Etsy",
+    "Post TikTok content showing the template in use"
+  ],
+  "print-on-demand": [
+    "Open free accounts on Redbubble and Merch by Amazon",
+    "Upload 30+ designs in a consistent niche",
+    "Drive traffic via Pinterest or TikTok"
+  ],
+  "etsy-seller": [
+    "Open an Etsy shop with 10–20 listings",
+    "Optimise titles and tags for Etsy search",
+    "Drive external traffic via Pinterest"
+  ],
+  "dropshipping": [
+    "Research trending products on TikTok and AliExpress",
+    "Set up a Shopify trial store with DSers",
+    "Drive traffic via TikTok organic before paid ads"
+  ],
+  "amazon-fba": [
+    "Research products using Jungle Scout or Helium 10",
+    "Source a test batch from Alibaba",
+    "Create an optimised listing and launch with PPC"
+  ],
+  "saas-founder": [
+    "Identify a painful niche problem people pay to solve",
+    "Build an MVP using no-code or a co-founder",
+    "Launch to a small audience and iterate fast"
+  ],
+  "virtual-assistant": [
+    "List services on Fiverr, Upwork, and VA groups",
+    "Offer a free trial week to your first client",
+    "Upsell additional services as you build trust"
+  ],
+  "online-tutor": [
+    "List on Tutorful, Superprof, or MyTutor",
+    "Respond fast to enquiries",
+    "Build recurring weekly students for stable income"
+  ],
+  "bookkeeping": [
+    "Get QuickBooks or Xero certified — free",
+    "List on Upwork targeting small business owners",
+    "Land 3–5 monthly clients for recurring income"
+  ],
+  "sales-rep": [
+    "Highlight customer-facing experience on your CV",
+    "Apply for SDR roles at SaaS companies on LinkedIn",
+    "Study Challenger Sale and SPIN Selling frameworks"
+  ],
+  "remote-closer": [
+    "Study closing frameworks — Cole Gordon on YouTube",
+    "Apply to remote closing roles on LinkedIn",
+    "Track close rate to negotiate higher commission"
+  ],
+  "appointment-setter": [
+    "Apply to setter roles in Facebook groups and LinkedIn",
+    "Practice DM scripts with a mentor",
+    "Track your metrics — show rates and set rates"
+  ],
+  "lead-gen": [
+    "Learn LinkedIn Sales Navigator and Apollo.io",
+    "Offer lead lists to 3 businesses as free trial",
+    "Package as monthly retainer delivering qualified leads"
+  ],
+  "recruiter": [
+    "Pick a niche sector — tech, finance, or marketing",
+    "Connect with hiring managers on LinkedIn",
+    "Charge 15% of placed candidate annual salary"
+  ],
+  "real-estate-agent": [
+    "Get licensed through ARLA or NAEA",
+    "Join an established agency to learn the ropes",
+    "Build locally — most agents grow through referrals"
+  ],
+  "insurance-agent": [
+    "Get FCA authorised or join as appointed representative",
+    "Study life, health, or general insurance products",
+    "Build referral network with financial advisors"
+  ],
+  "event-planner": [
+    "Plan a free event for a friend or charity as portfolio",
+    "List on wedding and event directories",
+    "Partner with venues for referral business"
+  ],
+  "personal-trainer": [
+    "Get Level 3 PT qualification (REPs accredited)",
+    "Build first 5 clients through gym contacts",
+    "Transition to online coaching to scale beyond hourly"
+  ],
+  "online-fitness-coach": [
+    "Define your niche — fat loss, muscle gain, sport",
+    "Post free valuable fitness content daily",
+    "DM followers offering a free discovery call"
+  ],
+  "nutrition-coach": [
+    "Get Level 4 Nutrition or Precision Nutrition certified",
+    "Offer free consultations to first 5 clients",
+    "Package into monthly coaching retainers"
+  ],
+  "yoga-instructor": [
+    "Complete a 200-hour RYT yoga teacher training",
+    "Offer free community classes to build a following",
+    "Launch an online membership for passive income"
+  ],
+  "photographer": [
+    "Build a portfolio with discounted shoots for friends",
+    "List on Bark.com and wedding directories",
+    "Niche into real estate or product photography"
+  ],
+  "videographer": [
+    "Build portfolio with 5 sample videos",
+    "Pitch local businesses for brand video content",
+    "Target weddings for reliable seasonal income"
+  ],
+  "music-producer": [
+    "Upload best 20 beats to BeatStars with clear tags",
+    "Post beat-making content on TikTok and YouTube",
+    "Pitch catalogue to sync licensing platforms"
+  ],
+  "dj": [
+    "Practice daily and record mixes as your portfolio",
+    "Offer to play smaller venues and private events",
+    "Build relationships with promoters and venues"
+  ],
+  "illustrator": [
+    "Build portfolio of 20+ pieces with consistent style",
+    "List on 99designs and Dribbble for freelance work",
+    "Sell prints through your own Etsy shop"
+  ],
+  "voice-actor": [
+    "Set up basic home studio — USB mic (~$150)",
+    "Record demos in commercial and narration styles",
+    "List on Voices.com, Voice123, and ACX"
+  ],
+  "makeup-artist": [
+    "Complete a makeup artistry course and build your kit",
+    "Do free shoots with photographers for portfolio",
+    "List on wedding directories and promote on Instagram"
+  ],
+  "fashion-stylist": [
+    "Style friends and family free to build portfolio",
+    "Offer sessions through Instagram and word of mouth",
+    "Partner with photographers for collaborative shoots"
+  ],
+  "tattoo-artist": [
+    "Apprentice under an established artist",
+    "Build your flash sheet and post on Instagram",
+    "Build a waitlist once you have your own following"
+  ],
+  "barber": [
+    "Complete Level 2 Barbering qualification",
+    "Work in a shop to build speed and clientele",
+    "Go mobile or rent a booth to maximise earnings"
+  ],
+  "hair-stylist": [
+    "Complete NVQ Level 2/3 Hairdressing",
+    "Build Instagram portfolio with before/after photos",
+    "Move to self-employment or rent a chair"
+  ],
+  "electrician": [
+    "Complete Level 3 Electrical Installation qualification",
+    "Apprentice under a qualified electrician",
+    "Register self-employed and build your client base"
+  ],
+  "plumber": [
+    "Complete NVQ Level 2/3 in Plumbing and Heating",
+    "Get Gas Safe registered for gas work",
+    "Build local client base through Checkatrade"
+  ],
+  "carpenter": [
+    "Complete a City and Guilds carpentry qualification",
+    "Build a photo portfolio of your work",
+    "Register on Checkatrade and build through referrals"
+  ],
+  "painter-decorator": [
+    "Buy basic equipment (~$200)",
+    "Offer discounted first job for photos and reviews",
+    "List on Checkatrade and local Facebook groups"
+  ],
+  "mechanic": [
+    "Complete IMI Level 3 Vehicle Maintenance",
+    "Work at a garage to build diagnostic skills",
+    "Go mobile — invest in a van and tools"
+  ],
+  "solar-installer": [
+    "Complete MCS-approved solar installation course",
+    "Work with established installer for site experience",
+    "Get MCS accreditation and start quoting"
+  ],
+  "locksmith": [
+    "Complete a locksmith training course (~$500)",
+    "Buy a starter kit of picks and blanks",
+    "Set up Google Business profile for local visibility"
+  ],
+  "general-contractor": [
+    "Build experience working in a trade first",
+    "Get public liability insurance",
+    "Start with small jobs and scale as reputation grows"
+  ],
+  "delivery-driver": [
+    "Sign up on Deliveroo, Uber Eats, and Amazon Flex",
+    "Work peak hours for best earnings",
+    "Track mileage carefully for tax deductions"
+  ],
+  "uber-driver": [
+    "Apply for private hire licence through your local council",
+    "Register on Uber, Bolt, and Ola",
+    "Work peak times — mornings, evenings, weekends"
+  ],
+  "reseller": [
+    "Start with items you already own to test the process",
+    "Source from charity shops and Facebook Marketplace",
+    "List with good photos on eBay, Vinted, and Depop"
+  ],
+  "airbnb-host": [
+    "Create a listing with professional photos",
+    "Start with competitive pricing to build reviews",
+    "Automate check-in and cleaning for minimal effort"
+  ],
+  "dog-walker": [
+    "Get DBS checked and register on Rover and Bark.com",
+    "Offer introductory walks at a discount",
+    "Build word of mouth through vets and pet shops"
+  ],
+  "car-detailer": [
+    "Invest in starter detailing kit (~$200–$400)",
+    "Detail friends' cars free to build portfolio",
+    "List on Facebook Marketplace and build through referrals"
+  ],
+  "pressure-washing": [
+    "Buy a commercial pressure washer (~$300–$600)",
+    "Knock on doors in affluent areas",
+    "Partner with commercial property managers for contracts"
+  ],
+  "window-cleaner": [
+    "Buy basic kit — squeegees and extension pole (~$100)",
+    "Offer free first clean in residential areas",
+    "Build commercial contracts with offices and shops"
+  ],
+  "junk-removal": [
+    "Get waste carrier licence from Environment Agency ($154)",
+    "List on AnyVan, TaskRabbit, and Facebook Marketplace",
+    "Resell valuable items to increase profit margin"
+  ],
+  "stock-photos": [
+    "Create accounts on Shutterstock, Adobe Stock, and Alamy",
+    "Upload 100+ commercially useful images",
+    "Focus on business, lifestyle, and food content"
+  ],
+  "music-licensing": [
+    "Upload tracks to BeatStars and DistroKid",
+    "Create SoundCloud profile with your best work",
+    "Post production content on TikTok to attract buyers"
+  ],
+  "creator-agency": [
+    "Start as a freelancer and systematise your workflow",
+    "Hire a part-time editor or VA to handle delivery",
+    "Sign 3–5 retainer clients before scaling further"
+  ],
+  "personal-brand": [
+    "Build your own personal brand as proof of concept",
+    "Pitch busy founders and executives on LinkedIn",
+    "Offer a trial month before pitching a retainer"
+  ],
+  "growth-operator": [
+    "Build a track record in one channel first",
+    "Document results clearly — growth % and revenue driven",
+    "Pitch startups on a performance-based arrangement"
+  ],
+  "automation-specialist": [
+    "Get certified in Make.com and Zapier — free",
+    "Build 5 automation templates solving common problems",
+    "Pitch professional services and e-commerce brands"
+  ]
 };
