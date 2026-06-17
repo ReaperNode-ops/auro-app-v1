@@ -9,6 +9,7 @@ import AuthScreen from "./AuthScreen.jsx";
 import { GlowOrb, Badge } from "./ui/primitives";
 import { auroChat } from "./auroAI.js";
 import { ICON_B64 } from "./assets/icon";
+import auroMark from "./assets/auro-mark-transparent.png";
 import { getDailyUsage, incrementDailyUsage } from "./usage.js";
 import { T } from "./theme";
 import {
@@ -2531,79 +2532,39 @@ function SplashLoader() {
   );
 }
 
-// ── Auro brand mark (vector recreation of the icon) ────────────────────────
-// Inline SVG of the real Auro emblem: a bold gold "A" (sharp apex, thick legs,
-// crossbar + centre dot) inside an OPEN ring that runs gold down the left and
-// bottom and electric blue down the right, broken at the top where the apex
-// pushes through. Vector, so it stays crisp at any zoom.
-function AuroIntroMark({ className }) {
-  return (
-    <svg className={className} viewBox="0 0 240 240" fill="none" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
-      <defs>
-        <linearGradient id="auroMarkGold" x1="76" y1="46" x2="162" y2="178" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#ffe9a8" />
-          <stop offset="42%" stopColor="#f5c842" />
-          <stop offset="100%" stopColor="#d99a17" />
-        </linearGradient>
-        <linearGradient id="auroRingGold" x1="44" y1="70" x2="150" y2="210" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#ffe18a" />
-          <stop offset="55%" stopColor="#f0b32f" />
-          <stop offset="100%" stopColor="#caa224" />
-        </linearGradient>
-        <linearGradient id="auroRingBlue" x1="206" y1="86" x2="150" y2="206" gradientUnits="userSpaceOnUse">
-          <stop offset="0%" stopColor="#8ec5ff" />
-          <stop offset="45%" stopColor="#4a9eff" />
-          <stop offset="100%" stopColor="#2f74d6" />
-        </linearGradient>
-      </defs>
-      <path d="M103 44 A80 80 0 1 0 137 200" stroke="url(#auroRingGold)" strokeWidth="9" strokeLinecap="round" />
-      <path d="M137 44 A80 80 0 0 1 137 200" stroke="url(#auroRingBlue)" strokeWidth="9" strokeLinecap="round" />
-      <path d="M120 46 L104 55 L56 174 L88 174 Z" fill="url(#auroMarkGold)" />
-      <path d="M120 46 L136 55 L184 174 L152 174 Z" fill="url(#auroMarkGold)" />
-      <path d="M93 131 L147 131 L147 145 L93 145 Z" fill="url(#auroMarkGold)" />
-      <circle cx="120" cy="134" r="12" fill="url(#auroMarkGold)" />
-    </svg>
-  );
-}
-
 // ── Auro brand intro ───────────────────────────────────────────────────────
-// Minimal, logo-focused opener: dark screen, a faint glow, the Auro mark, and
-// ONE continuous camera push into it until it fills/passes the screen, then a
-// fade into the app. No streaks, no wash, no staged scale jumps — the zoom is a
-// single eased transform. App owns the timer (INTRO_DURATION).
-function AuroOpeningAnimation({ durationMs = 5200 }) {
-  const logoSrc = ICON_B64.startsWith("data:") ? ICON_B64 : "data:image/png;base64," + ICON_B64;
+// Minimal, logo-focused opener: dark screen, a faint glow, and the transparent
+// Auro mark (src/assets/auro-mark-transparent.png) pushing into the screen in
+// one motion — a calm slow start that accelerates fast, then a fade into the
+// app. Transform + opacity only. No tile, wordmark, streaks, wash, or text.
+// App owns the timer (INTRO_DURATION).
+function AuroOpeningAnimation({ durationMs = 3800 }) {
   return (
     <div className="auro-intro" style={{ position:"fixed", inset:0, zIndex:10000, background:"#000", overflow:"hidden", ["--introDur"]: durationMs + "ms" }}>
       <style>{`
-        @keyframes auroIntroRoot { 0%{opacity:1} 86%{opacity:1} 100%{opacity:0} }
-        /* ONE continuous zoom lives on the WRAPPER, so the real image and the
-           SVG always share the exact same scale + centre. We only crossfade
-           their opacity, so the handoff is size-matched and invisible. */
-        @keyframes auroIntroZoom { 0%{transform:translate3d(0,0,0) scale3d(1,1,1)} 100%{transform:translate3d(0,0,0) scale3d(20,20,1)} }
-        /* real raster: in fast, out by ~30% while the wrapper is still small */
-        @keyframes auroIntroReal { 0%{opacity:0} 8%{opacity:1} 24%{opacity:1} 30%{opacity:0} 100%{opacity:0} }
-        /* vector mark: takes over across the 22-30% crossfade, then carries on */
-        @keyframes auroIntroMarkFade { 0%,22%{opacity:0} 30%{opacity:1} 88%{opacity:1} 100%{opacity:0} }
-        @keyframes auroIntroGlow { 0%{opacity:0} 14%{opacity:.7} 80%{opacity:.7} 100%{opacity:0} }
+        @keyframes auroIntroRoot { 0%{opacity:1} 88%{opacity:1} 100%{opacity:0} }
+        /* one push: calm slow start (small early growth) accelerating into a
+           fast finish — encoded by the scale stops, transform + opacity only */
+        @keyframes auroIntroZoom {
+          0%{opacity:0; transform:translate3d(0,0,0) scale3d(.92,.92,1)}
+          12%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
+          38%{transform:translate3d(0,0,0) scale3d(1.45,1.45,1)}
+          70%{opacity:1; transform:translate3d(0,0,0) scale3d(8,8,1)}
+          100%{opacity:0; transform:translate3d(0,0,0) scale3d(26,26,1)}
+        }
+        @keyframes auroIntroGlow { 0%{opacity:0} 16%{opacity:.6} 72%{opacity:.6} 100%{opacity:0} }
 
         .auro-intro{ animation: auroIntroRoot var(--introDur) ease both; }
         .auro-intro .aiGlow{ position:absolute; top:50%; left:50%; width:70vmax; height:70vmax; transform:translate3d(-50%,-50%,0); pointer-events:none;
           background:radial-gradient(circle at 50% 50%, rgba(74,158,255,.16), transparent 55%), radial-gradient(circle at 50% 50%, rgba(245,200,66,.12), transparent 60%);
           animation: auroIntroGlow var(--introDur) ease both; }
         .auro-intro .aiStage{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
-        /* the single moving element: one transform, one easing curve */
-        .auro-intro .aiZoom{ position:relative; width:clamp(120px,28vw,260px); height:clamp(120px,28vw,260px);
-          transform-origin:center center; will-change:transform; backface-visibility:hidden;
-          animation: auroIntroZoom var(--introDur) cubic-bezier(.6,0,.78,.34) both; }
-        .auro-intro .aiZoom > *{ position:absolute; inset:0; width:100%; height:100%; }
-        .auro-intro .auroIntroRealLogo{ object-fit:contain; will-change:opacity; animation: auroIntroReal var(--introDur) ease both; }
-        .auro-intro .auroIntroMark{ will-change:opacity; animation: auroIntroMarkFade var(--introDur) ease both; }
+        .auro-intro .auroIntroLogo{ width:clamp(140px,30vw,300px); height:auto; transform-origin:center center;
+          will-change:transform,opacity; backface-visibility:hidden;
+          animation: auroIntroZoom var(--introDur) linear both; }
 
         @media (prefers-reduced-motion: reduce){
-          .auro-intro .aiZoom{ animation:none !important; transform:none !important; }
-          .auro-intro .auroIntroRealLogo{ animation:none !important; opacity:1 !important; }
-          .auro-intro .auroIntroMark{ animation:none !important; opacity:0 !important; }
+          .auro-intro .auroIntroLogo{ animation:none !important; opacity:1 !important; transform:none !important; }
           .auro-intro .aiGlow{ animation:none !important; opacity:.4 !important; }
           .auro-intro{ animation: auroIntroRoot var(--introDur) linear both; } /* gentle opacity fade only */
         }
@@ -2611,10 +2572,7 @@ function AuroOpeningAnimation({ durationMs = 5200 }) {
 
       <div className="aiGlow" aria-hidden />
       <div className="aiStage">
-        <div className="aiZoom">
-          <img className="auroIntroRealLogo" src={logoSrc} alt="Auro" aria-hidden="true" />
-          <AuroIntroMark className="auroIntroMark" />
-        </div>
+        <img className="auroIntroLogo" src={auroMark} alt="Auro" aria-hidden="true" />
       </div>
     </div>
   );
@@ -2623,7 +2581,7 @@ function AuroOpeningAnimation({ durationMs = 5200 }) {
 export default function App() {
   // ── DEV: temporary analysis-gate bypass for testing other pages ─────────────
   const DEV_MODE = true; // TODO: set to false before release
-  const INTRO_DURATION = 5200; // brand intro length in ms (adjust to taste)
+  const INTRO_DURATION = 3800; // brand intro length in ms (adjust to taste)
   // ── Firebase auth state ────────────────────────────────────────────────────
   // "loading" → "unauthenticated" → "unverified" → "authenticated"
   // "unverified" = signed in but emailVerified === false; blocks app access
