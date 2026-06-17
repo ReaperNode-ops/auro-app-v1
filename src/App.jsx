@@ -2572,13 +2572,19 @@ function AuroIntroMark({ className }) {
 // fade into the app. No streaks, no wash, no staged scale jumps — the zoom is a
 // single eased transform. App owns the timer (INTRO_DURATION).
 function AuroOpeningAnimation({ durationMs = 5200 }) {
+  const logoSrc = ICON_B64.startsWith("data:") ? ICON_B64 : "data:image/png;base64," + ICON_B64;
   return (
     <div className="auro-intro" style={{ position:"fixed", inset:0, zIndex:10000, background:"#000", overflow:"hidden", ["--introDur"]: durationMs + "ms" }}>
       <style>{`
         @keyframes auroIntroRoot { 0%{opacity:1} 86%{opacity:1} 100%{opacity:0} }
-        /* ONE continuous zoom: a single transform segment, one easing curve */
+        /* ONE continuous zoom lives on the WRAPPER, so the real image and the
+           SVG always share the exact same scale + centre. We only crossfade
+           their opacity, so the handoff is size-matched and invisible. */
         @keyframes auroIntroZoom { 0%{transform:translate3d(0,0,0) scale3d(1,1,1)} 100%{transform:translate3d(0,0,0) scale3d(20,20,1)} }
-        @keyframes auroIntroFade { 0%{opacity:0} 9%{opacity:1} 88%{opacity:1} 100%{opacity:0} }
+        /* real raster: in fast, out by ~30% while the wrapper is still small */
+        @keyframes auroIntroReal { 0%{opacity:0} 8%{opacity:1} 24%{opacity:1} 30%{opacity:0} 100%{opacity:0} }
+        /* vector mark: takes over across the 22-30% crossfade, then carries on */
+        @keyframes auroIntroMarkFade { 0%,22%{opacity:0} 30%{opacity:1} 88%{opacity:1} 100%{opacity:0} }
         @keyframes auroIntroGlow { 0%{opacity:0} 14%{opacity:.7} 80%{opacity:.7} 100%{opacity:0} }
 
         .auro-intro{ animation: auroIntroRoot var(--introDur) ease both; }
@@ -2586,12 +2592,18 @@ function AuroOpeningAnimation({ durationMs = 5200 }) {
           background:radial-gradient(circle at 50% 50%, rgba(74,158,255,.16), transparent 55%), radial-gradient(circle at 50% 50%, rgba(245,200,66,.12), transparent 60%);
           animation: auroIntroGlow var(--introDur) ease both; }
         .auro-intro .aiStage{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
-        .auro-intro .auroIntroMark{ width:clamp(120px,28vw,260px); height:clamp(120px,28vw,260px); transform-origin:center center;
-          will-change:transform,opacity; backface-visibility:hidden;
-          animation: auroIntroZoom var(--introDur) cubic-bezier(.5,0,.7,.42) both, auroIntroFade var(--introDur) ease both; }
+        /* the single moving element: one transform, one easing curve */
+        .auro-intro .aiZoom{ position:relative; width:clamp(120px,28vw,260px); height:clamp(120px,28vw,260px);
+          transform-origin:center center; will-change:transform; backface-visibility:hidden;
+          animation: auroIntroZoom var(--introDur) cubic-bezier(.6,0,.78,.34) both; }
+        .auro-intro .aiZoom > *{ position:absolute; inset:0; width:100%; height:100%; }
+        .auro-intro .auroIntroRealLogo{ object-fit:contain; will-change:opacity; animation: auroIntroReal var(--introDur) ease both; }
+        .auro-intro .auroIntroMark{ will-change:opacity; animation: auroIntroMarkFade var(--introDur) ease both; }
 
         @media (prefers-reduced-motion: reduce){
-          .auro-intro .auroIntroMark{ animation:none !important; opacity:1 !important; transform:none !important; }
+          .auro-intro .aiZoom{ animation:none !important; transform:none !important; }
+          .auro-intro .auroIntroRealLogo{ animation:none !important; opacity:1 !important; }
+          .auro-intro .auroIntroMark{ animation:none !important; opacity:0 !important; }
           .auro-intro .aiGlow{ animation:none !important; opacity:.4 !important; }
           .auro-intro{ animation: auroIntroRoot var(--introDur) linear both; } /* gentle opacity fade only */
         }
@@ -2599,7 +2611,10 @@ function AuroOpeningAnimation({ durationMs = 5200 }) {
 
       <div className="aiGlow" aria-hidden />
       <div className="aiStage">
-        <AuroIntroMark className="auroIntroMark" />
+        <div className="aiZoom">
+          <img className="auroIntroRealLogo" src={logoSrc} alt="Auro" aria-hidden="true" />
+          <AuroIntroMark className="auroIntroMark" />
+        </div>
       </div>
     </div>
   );
