@@ -9,7 +9,7 @@ import AuthScreen from "./AuthScreen.jsx";
 import { GlowOrb, Badge } from "./ui/primitives";
 import { auroChat } from "./auroAI.js";
 import { ICON_B64 } from "./assets/icon";
-import auroMark from "./assets/auro-mark-transparent.png";
+import auroMark from "./assets/auro-mark-transparent-4096.png";
 import { getDailyUsage, incrementDailyUsage } from "./usage.js";
 import { T } from "./theme";
 import {
@@ -2547,10 +2547,11 @@ function AuroOpeningAnimation({ durationMs = 3800 }) {
            fast finish — encoded by the scale stops, transform + opacity only */
         @keyframes auroIntroZoom {
           0%{opacity:0; transform:translate3d(0,0,0) scale3d(.92,.92,1)}
-          12%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
-          38%{transform:translate3d(0,0,0) scale3d(1.45,1.45,1)}
-          70%{opacity:1; transform:translate3d(0,0,0) scale3d(8,8,1)}
-          100%{opacity:0; transform:translate3d(0,0,0) scale3d(26,26,1)}
+          10%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
+          40%{opacity:1; transform:translate3d(0,0,0) scale3d(1.6,1.6,1)}
+          72%{opacity:1; transform:translate3d(0,0,0) scale3d(7,7,1)}
+          88%{opacity:.85; transform:translate3d(0,0,0) scale3d(11,11,1)}
+          100%{opacity:0; transform:translate3d(0,0,0) scale3d(14,14,1)}
         }
         @keyframes auroIntroGlow { 0%{opacity:0} 16%{opacity:.6} 72%{opacity:.6} 100%{opacity:0} }
 
