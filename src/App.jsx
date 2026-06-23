@@ -2538,33 +2538,59 @@ function SplashLoader() {
 // one motion — a calm slow start that accelerates fast, then a fade into the
 // app. Transform + opacity only. No tile, wordmark, streaks, wash, or text.
 // App owns the timer (INTRO_DURATION).
-function AuroOpeningAnimation({ durationMs = 3800 }) {
+function AuroOpeningAnimation({ durationMs = 3200 }) {
+  // A few radial light lines that only appear during the fast push, stretching
+  // outward from centre to read as a warp tunnel. Alternating gold/blue, low
+  // opacity, transform + opacity only.
+  const TUNNEL = [
+    { d: 18,  c: "rgba(245,200,66,.55)" },
+    { d: 63,  c: "rgba(74,158,255,.55)" },
+    { d: 108, c: "rgba(245,200,66,.5)" },
+    { d: 153, c: "rgba(74,158,255,.5)" },
+    { d: 198, c: "rgba(245,200,66,.55)" },
+    { d: 243, c: "rgba(74,158,255,.55)" },
+    { d: 288, c: "rgba(245,200,66,.5)" },
+    { d: 333, c: "rgba(74,158,255,.5)" },
+  ];
   return (
     <div className="auro-intro" style={{ position:"fixed", inset:0, zIndex:10000, background:"#000", overflow:"hidden", ["--introDur"]: durationMs + "ms" }}>
       <style>{`
-        @keyframes auroIntroRoot { 0%{opacity:1} 88%{opacity:1} 100%{opacity:0} }
-        /* one push: calm slow start (small early growth) accelerating into a
-           fast finish — encoded by the scale stops, transform + opacity only */
+        @keyframes auroIntroRoot { 0%{opacity:1} 90%{opacity:1} 100%{opacity:0} }
+        /* calm reveal, then hard acceleration. Stops encode the accel; linear
+           timing keeps velocity rising smoothly (no per-segment stutter). */
         @keyframes auroIntroZoom {
-          0%{opacity:0; transform:translate3d(0,0,0) scale3d(.92,.92,1)}
-          10%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
-          40%{opacity:1; transform:translate3d(0,0,0) scale3d(1.6,1.6,1)}
-          72%{opacity:1; transform:translate3d(0,0,0) scale3d(7,7,1)}
-          88%{opacity:.85; transform:translate3d(0,0,0) scale3d(11,11,1)}
-          100%{opacity:0; transform:translate3d(0,0,0) scale3d(14,14,1)}
+          0%{opacity:0; transform:translate3d(0,0,0) scale3d(.9,.9,1)}
+          12%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
+          32%{opacity:1; transform:translate3d(0,0,0) scale3d(1.45,1.45,1)}
+          62%{opacity:1; transform:translate3d(0,0,0) scale3d(5,5,1)}
+          82%{opacity:.95; transform:translate3d(0,0,0) scale3d(10,10,1)}
+          100%{opacity:0; transform:translate3d(0,0,0) scale3d(15,15,1)}
         }
-        @keyframes auroIntroGlow { 0%{opacity:0} 16%{opacity:.6} 72%{opacity:.6} 100%{opacity:0} }
+        /* warp lines: hidden during the calm reveal, then stretch outward */
+        @keyframes auroTunnel {
+          0%,30%{ opacity:0; transform:rotate(var(--deg)) translateY(-6%) scaleY(.35); }
+          52%{ opacity:.55; }
+          100%{ opacity:0; transform:rotate(var(--deg)) translateY(-58%) scaleY(1.8); }
+        }
+        @keyframes auroIntroGlow { 0%{opacity:0} 16%{opacity:.6} 74%{opacity:.55} 100%{opacity:0} }
 
         .auro-intro{ animation: auroIntroRoot var(--introDur) ease both; }
-        .auro-intro .aiGlow{ position:absolute; top:50%; left:50%; width:70vmax; height:70vmax; transform:translate3d(-50%,-50%,0); pointer-events:none;
+        .auro-intro .aiGlow{ position:absolute; top:50%; left:50%; width:70vmax; height:70vmax; transform:translate3d(-50%,-50%,0); pointer-events:none; z-index:0;
           background:radial-gradient(circle at 50% 50%, rgba(74,158,255,.16), transparent 55%), radial-gradient(circle at 50% 50%, rgba(245,200,66,.12), transparent 60%);
           animation: auroIntroGlow var(--introDur) ease both; }
         .auro-intro .aiStage{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
-        .auro-intro .auroIntroLogo{ width:clamp(140px,30vw,300px); height:auto; transform-origin:center center;
+        /* tunnel sits behind the logo so the mark stays the hero */
+        .auro-intro .aiTunnel{ position:absolute; inset:0; z-index:1; pointer-events:none; }
+        .auro-intro .aiLine{ position:absolute; left:50%; top:50%; width:2px; height:50vmax; margin-left:-1px; margin-top:-50vmax;
+          transform-origin:50% 100%; will-change:transform,opacity;
+          background:linear-gradient(to top, transparent, var(--c) 32%, var(--c) 60%, transparent);
+          animation: auroTunnel var(--introDur) ease-out both; }
+        .auro-intro .auroIntroLogo{ position:relative; z-index:2; width:clamp(140px,30vw,300px); height:auto; transform-origin:center center;
           will-change:transform,opacity; backface-visibility:hidden;
           animation: auroIntroZoom var(--introDur) linear both; }
 
         @media (prefers-reduced-motion: reduce){
+          .auro-intro .aiTunnel{ display:none !important; }
           .auro-intro .auroIntroLogo{ animation:none !important; opacity:1 !important; transform:none !important; }
           .auro-intro .aiGlow{ animation:none !important; opacity:.4 !important; }
           .auro-intro{ animation: auroIntroRoot var(--introDur) linear both; } /* gentle opacity fade only */
@@ -2573,6 +2599,11 @@ function AuroOpeningAnimation({ durationMs = 3800 }) {
 
       <div className="aiGlow" aria-hidden />
       <div className="aiStage">
+        <div className="aiTunnel" aria-hidden>
+          {TUNNEL.map((l, idx) => (
+            <span key={idx} className="aiLine" style={{ ["--deg"]: l.d + "deg", ["--c"]: l.c }} />
+          ))}
+        </div>
         <img className="auroIntroLogo" src={auroMark} alt="Auro" aria-hidden="true" />
       </div>
     </div>
@@ -2582,7 +2613,7 @@ function AuroOpeningAnimation({ durationMs = 3800 }) {
 export default function App() {
   // ── DEV: temporary analysis-gate bypass for testing other pages ─────────────
   const DEV_MODE = true; // TODO: set to false before release
-  const INTRO_DURATION = 3800; // brand intro length in ms (adjust to taste)
+  const INTRO_DURATION = 3200; // brand intro length in ms (adjust to taste)
   // ── Firebase auth state ────────────────────────────────────────────────────
   // "loading" → "unauthenticated" → "unverified" → "authenticated"
   // "unverified" = signed in but emailVerified === false; blocks app access
