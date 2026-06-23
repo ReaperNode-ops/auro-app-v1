@@ -2538,80 +2538,91 @@ function SplashLoader() {
 // one motion — a calm slow start that accelerates fast, then a fade into the
 // app. Transform + opacity only. No tile, wordmark, streaks, wash, or text.
 // App owns the timer (INTRO_DURATION).
-function AuroOpeningAnimation({ durationMs = 2900 }) {
-  // A few radial light lines that only appear during the fast push, stretching
-  // outward from centre to read as a warp tunnel. Alternating gold/blue, low
-  // opacity, transform + opacity only.
+function AuroOpeningAnimation({ durationMs = 2600 }) {
+  // Radial light lines that appear during the fast push, stretching outward
+  // from centre to read as a warp tunnel. Alternating gold/blue, low opacity,
+  // transform + opacity only.
   const TUNNEL = [
-    { d: 12,  c: "rgba(245,200,66,.55)" },
-    { d: 42,  c: "rgba(74,158,255,.5)" },
+    { d: 0,   c: "rgba(245,200,66,.5)" },
+    { d: 18,  c: "rgba(74,158,255,.48)" },
+    { d: 36,  c: "rgba(245,200,66,.55)" },
+    { d: 54,  c: "rgba(74,158,255,.5)" },
     { d: 72,  c: "rgba(245,200,66,.5)" },
-    { d: 102, c: "rgba(74,158,255,.55)" },
-    { d: 132, c: "rgba(245,200,66,.55)" },
+    { d: 90,  c: "rgba(74,158,255,.55)" },
+    { d: 108, c: "rgba(245,200,66,.52)" },
+    { d: 126, c: "rgba(74,158,255,.48)" },
+    { d: 144, c: "rgba(245,200,66,.55)" },
     { d: 162, c: "rgba(74,158,255,.5)" },
-    { d: 192, c: "rgba(245,200,66,.5)" },
-    { d: 222, c: "rgba(74,158,255,.55)" },
+    { d: 180, c: "rgba(245,200,66,.5)" },
+    { d: 198, c: "rgba(74,158,255,.55)" },
+    { d: 216, c: "rgba(245,200,66,.52)" },
+    { d: 234, c: "rgba(74,158,255,.48)" },
     { d: 252, c: "rgba(245,200,66,.55)" },
-    { d: 282, c: "rgba(74,158,255,.5)" },
-    { d: 312, c: "rgba(245,200,66,.5)" },
-    { d: 342, c: "rgba(74,158,255,.55)" },
+    { d: 270, c: "rgba(74,158,255,.5)" },
+    { d: 288, c: "rgba(245,200,66,.5)" },
+    { d: 306, c: "rgba(74,158,255,.55)" },
+    { d: 324, c: "rgba(245,200,66,.52)" },
+    { d: 342, c: "rgba(74,158,255,.48)" },
   ];
   return (
     <div className="auro-intro" style={{ position:"fixed", inset:0, zIndex:10000, background:"#000", overflow:"hidden", ["--introDur"]: durationMs + "ms" }}>
       <style>{`
         @keyframes auroIntroRoot {
-  0%{opacity:1}
-  78%{opacity:1}
-  92%{opacity:0}
-  100%{opacity:0}
-}
-        /* calm reveal, then hard acceleration. Stops encode the accel; linear
-           timing keeps velocity rising smoothly (no per-segment stutter). */
-       @keyframes auroIntroZoom {
-  0%{opacity:0; transform:translate3d(0,0,0) scale3d(.9,.9,1)}
-  10%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
-  28%{opacity:1; transform:translate3d(0,0,0) scale3d(1.45,1.45,1)}
-  54%{opacity:1; transform:translate3d(0,0,0) scale3d(6,6,1)}
-  72%{opacity:.95; transform:translate3d(0,0,0) scale3d(12,12,1)}
-  82%{opacity:.25; transform:translate3d(0,0,0) scale3d(15,15,1)}
-  92%{opacity:0; transform:translate3d(0,0,0) scale3d(17,17,1)}
-  100%{opacity:0; transform:translate3d(0,0,0) scale3d(17,17,1)}
-}
-        /* warp lines: hidden during the calm reveal, then stretch outward */
+          0%{opacity:1}
+          84%{opacity:1}
+          96%{opacity:0}
+          100%{opacity:0}
+        }
+
+        /* calm reveal, controlled push, then a hard final launch */
+        @keyframes auroIntroZoom {
+          0%{opacity:0; transform:translate3d(0,0,0) scale3d(.9,.9,1)}
+          12%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
+          34%{opacity:1; transform:translate3d(0,0,0) scale3d(1.35,1.35,1)}
+          56%{opacity:1; transform:translate3d(0,0,0) scale3d(3.2,3.2,1)}
+          72%{opacity:1; transform:translate3d(0,0,0) scale3d(7.5,7.5,1)}
+          84%{opacity:.95; transform:translate3d(0,0,0) scale3d(18,18,1)}
+          94%{opacity:.28; transform:translate3d(0,0,0) scale3d(38,38,1)}
+          100%{opacity:0; transform:translate3d(0,0,0) scale3d(60,60,1)}
+        }
+
+        /* warp lines: hidden during reveal, then stretch hard at the end */
         @keyframes auroTunnel {
-  0%,24%{ opacity:0; transform:rotate(var(--deg)) translateY(-6%) scaleY(.35); }
-  46%{ opacity:.6; }
-  70%{ opacity:.55; transform:rotate(var(--deg)) translateY(-56%) scaleY(1.9); }
-  82%{ opacity:0; transform:rotate(var(--deg)) translateY(-68%) scaleY(2.25); }
-  100%{ opacity:0; transform:rotate(var(--deg)) translateY(-68%) scaleY(2.25); }
-}
+          0%,28%{ opacity:0; transform:rotate(var(--deg)) translateY(-4%) scaleY(.22); }
+          52%{ opacity:.42; transform:rotate(var(--deg)) translateY(-18%) scaleY(.7); }
+          72%{ opacity:.68; transform:rotate(var(--deg)) translateY(-54%) scaleY(2.1); }
+          86%{ opacity:.78; transform:rotate(var(--deg)) translateY(-96%) scaleY(4.1); }
+          100%{ opacity:0; transform:rotate(var(--deg)) translateY(-150%) scaleY(6.2); }
+        }
+
         @keyframes auroIntroGlow {
-  0%{opacity:0}
-  14%{opacity:.55}
-  62%{opacity:.45}
-  78%{opacity:0}
-  100%{opacity:0}
-}
+          0%{opacity:0}
+          14%{opacity:.55}
+          60%{opacity:.45}
+          82%{opacity:.3}
+          96%{opacity:0}
+          100%{opacity:0}
+        }
+
         .auro-intro{ animation: auroIntroRoot var(--introDur) ease both; }
         .auro-intro .aiGlow{ position:absolute; top:50%; left:50%; width:70vmax; height:70vmax; transform:translate3d(-50%,-50%,0); pointer-events:none; z-index:0;
           background:radial-gradient(circle at 50% 50%, rgba(74,158,255,.16), transparent 55%), radial-gradient(circle at 50% 50%, rgba(245,200,66,.12), transparent 60%);
           animation: auroIntroGlow var(--introDur) ease both; }
         .auro-intro .aiStage{ position:absolute; inset:0; display:flex; align-items:center; justify-content:center; }
-        /* tunnel sits behind the logo so the mark stays the hero */
         .auro-intro .aiTunnel{ position:absolute; inset:0; z-index:1; pointer-events:none; }
         .auro-intro .aiLine{ position:absolute; left:50%; top:50%; width:2px; height:50vmax; margin-left:-1px; margin-top:-50vmax;
           transform-origin:50% 100%; will-change:transform,opacity;
           background:linear-gradient(to top, transparent, var(--c) 32%, var(--c) 60%, transparent);
-          animation: auroTunnel var(--introDur) ease-out both; }
+          animation: auroTunnel var(--introDur) cubic-bezier(.72,0,.98,.36) both; }
         .auro-intro .auroIntroLogo{ position:relative; z-index:2; width:clamp(140px,30vw,300px); height:auto; transform-origin:center center;
           will-change:transform,opacity; backface-visibility:hidden;
-          animation: auroIntroZoom var(--introDur) linear both; }
+          animation: auroIntroZoom var(--introDur) cubic-bezier(.72,0,.98,.36) both; }
 
         @media (prefers-reduced-motion: reduce){
           .auro-intro .aiTunnel{ display:none !important; }
           .auro-intro .auroIntroLogo{ animation:none !important; opacity:1 !important; transform:none !important; }
           .auro-intro .aiGlow{ animation:none !important; opacity:.4 !important; }
-          .auro-intro{ animation: auroIntroRoot var(--introDur) linear both; } /* gentle opacity fade only */
+          .auro-intro{ animation: auroIntroRoot var(--introDur) linear both; }
         }
       `}</style>
 
@@ -2627,7 +2638,6 @@ function AuroOpeningAnimation({ durationMs = 2900 }) {
     </div>
   );
 }
-
 export default function App() {
   // ── DEV: temporary analysis-gate bypass for testing other pages ─────────────
   const DEV_MODE = true; // TODO: set to false before release
