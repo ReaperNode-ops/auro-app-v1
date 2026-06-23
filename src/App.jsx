@@ -2559,27 +2559,39 @@ function AuroOpeningAnimation({ durationMs = 2900 }) {
   return (
     <div className="auro-intro" style={{ position:"fixed", inset:0, zIndex:10000, background:"#000", overflow:"hidden", ["--introDur"]: durationMs + "ms" }}>
       <style>{`
-        @keyframes auroIntroRoot { 0%{opacity:1} 88%{opacity:1} 100%{opacity:0} }
+        @keyframes auroIntroRoot {
+  0%{opacity:1}
+  78%{opacity:1}
+  92%{opacity:0}
+  100%{opacity:0}
+}
         /* calm reveal, then hard acceleration. Stops encode the accel; linear
            timing keeps velocity rising smoothly (no per-segment stutter). */
-        @keyframes auroIntroZoom {
-          0%{opacity:0; transform:translate3d(0,0,0) scale3d(.9,.9,1)}
-          12%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
-          30%{opacity:1; transform:translate3d(0,0,0) scale3d(1.45,1.45,1)}
-          58%{opacity:1; transform:translate3d(0,0,0) scale3d(5.5,5.5,1)}
-          78%{opacity:1; transform:translate3d(0,0,0) scale3d(11,11,1)}
-          90%{opacity:.55; transform:translate3d(0,0,0) scale3d(14,14,1)}
-          100%{opacity:0; transform:translate3d(0,0,0) scale3d(16,16,1)}
-        }
+       @keyframes auroIntroZoom {
+  0%{opacity:0; transform:translate3d(0,0,0) scale3d(.9,.9,1)}
+  10%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
+  28%{opacity:1; transform:translate3d(0,0,0) scale3d(1.45,1.45,1)}
+  54%{opacity:1; transform:translate3d(0,0,0) scale3d(6,6,1)}
+  72%{opacity:.95; transform:translate3d(0,0,0) scale3d(12,12,1)}
+  82%{opacity:.25; transform:translate3d(0,0,0) scale3d(15,15,1)}
+  92%{opacity:0; transform:translate3d(0,0,0) scale3d(17,17,1)}
+  100%{opacity:0; transform:translate3d(0,0,0) scale3d(17,17,1)}
+}
         /* warp lines: hidden during the calm reveal, then stretch outward */
         @keyframes auroTunnel {
-          0%,28%{ opacity:0; transform:rotate(var(--deg)) translateY(-6%) scaleY(.35); }
-          50%{ opacity:.55; }
-          78%{ opacity:.5; transform:rotate(var(--deg)) translateY(-52%) scaleY(1.7); }
-          90%{ opacity:0; transform:rotate(var(--deg)) translateY(-62%) scaleY(2); }
-        }
-        @keyframes auroIntroGlow { 0%{opacity:0} 16%{opacity:.6} 70%{opacity:.5} 86%{opacity:0} 100%{opacity:0} }
-
+  0%,24%{ opacity:0; transform:rotate(var(--deg)) translateY(-6%) scaleY(.35); }
+  46%{ opacity:.6; }
+  70%{ opacity:.55; transform:rotate(var(--deg)) translateY(-56%) scaleY(1.9); }
+  82%{ opacity:0; transform:rotate(var(--deg)) translateY(-68%) scaleY(2.25); }
+  100%{ opacity:0; transform:rotate(var(--deg)) translateY(-68%) scaleY(2.25); }
+}
+        @keyframes auroIntroGlow {
+  0%{opacity:0}
+  14%{opacity:.55}
+  62%{opacity:.45}
+  78%{opacity:0}
+  100%{opacity:0}
+}
         .auro-intro{ animation: auroIntroRoot var(--introDur) ease both; }
         .auro-intro .aiGlow{ position:absolute; top:50%; left:50%; width:70vmax; height:70vmax; transform:translate3d(-50%,-50%,0); pointer-events:none; z-index:0;
           background:radial-gradient(circle at 50% 50%, rgba(74,158,255,.16), transparent 55%), radial-gradient(circle at 50% 50%, rgba(245,200,66,.12), transparent 60%);
@@ -2619,7 +2631,7 @@ function AuroOpeningAnimation({ durationMs = 2900 }) {
 export default function App() {
   // ── DEV: temporary analysis-gate bypass for testing other pages ─────────────
   const DEV_MODE = true; // TODO: set to false before release
-  const INTRO_DURATION = 2900; // brand intro length in ms (adjust to taste)
+  const INTRO_DURATION = 2550; // brand intro length in ms (adjust to taste)
   // ── Firebase auth state ────────────────────────────────────────────────────
   // "loading" → "unauthenticated" → "unverified" → "authenticated"
   // "unverified" = signed in but emailVerified === false; blocks app access
