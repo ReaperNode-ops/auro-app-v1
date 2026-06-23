@@ -2574,25 +2574,27 @@ function AuroOpeningAnimation({ durationMs = 2600 }) {
           100%{opacity:0}
         }
 
-        /* calm reveal, controlled push, then a hard final launch */
+        /* calm reveal, smooth push, then a fast final launch */
         @keyframes auroIntroZoom {
-          0%{opacity:0; transform:translate3d(0,0,0) scale3d(.9,.9,1)}
-          12%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
-          34%{opacity:1; transform:translate3d(0,0,0) scale3d(1.35,1.35,1)}
-          56%{opacity:1; transform:translate3d(0,0,0) scale3d(3.2,3.2,1)}
-          72%{opacity:1; transform:translate3d(0,0,0) scale3d(7.5,7.5,1)}
-          84%{opacity:.95; transform:translate3d(0,0,0) scale3d(18,18,1)}
-          94%{opacity:.28; transform:translate3d(0,0,0) scale3d(38,38,1)}
-          100%{opacity:0; transform:translate3d(0,0,0) scale3d(60,60,1)}
+          0%{opacity:0; transform:translate3d(0,0,0) scale3d(.92,.92,1)}
+          10%{opacity:1; transform:translate3d(0,0,0) scale3d(1,1,1)}
+          30%{opacity:1; transform:translate3d(0,0,0) scale3d(1.32,1.32,1)}
+          48%{opacity:1; transform:translate3d(0,0,0) scale3d(2.35,2.35,1)}
+          64%{opacity:1; transform:translate3d(0,0,0) scale3d(5.2,5.2,1)}
+          76%{opacity:1; transform:translate3d(0,0,0) scale3d(10,10,1)}
+          86%{opacity:.88; transform:translate3d(0,0,0) scale3d(17,17,1)}
+          94%{opacity:.32; transform:translate3d(0,0,0) scale3d(26,26,1)}
+          100%{opacity:0; transform:translate3d(0,0,0) scale3d(34,34,1)}
         }
 
-        /* warp lines: hidden during reveal, then stretch hard at the end */
+        /* warp lines: hidden during reveal, then stretch smoothly into launch */
         @keyframes auroTunnel {
           0%,28%{ opacity:0; transform:rotate(var(--deg)) translateY(-4%) scaleY(.22); }
-          52%{ opacity:.42; transform:rotate(var(--deg)) translateY(-18%) scaleY(.7); }
-          72%{ opacity:.68; transform:rotate(var(--deg)) translateY(-54%) scaleY(2.1); }
-          86%{ opacity:.78; transform:rotate(var(--deg)) translateY(-96%) scaleY(4.1); }
-          100%{ opacity:0; transform:rotate(var(--deg)) translateY(-150%) scaleY(6.2); }
+          50%{ opacity:.38; transform:rotate(var(--deg)) translateY(-16%) scaleY(.65); }
+          68%{ opacity:.62; transform:rotate(var(--deg)) translateY(-44%) scaleY(1.7); }
+          82%{ opacity:.74; transform:rotate(var(--deg)) translateY(-78%) scaleY(3.1); }
+          94%{ opacity:.42; transform:rotate(var(--deg)) translateY(-112%) scaleY(4.6); }
+          100%{ opacity:0; transform:rotate(var(--deg)) translateY(-135%) scaleY(5.4); }
         }
 
         @keyframes auroIntroGlow {
@@ -2613,10 +2615,10 @@ function AuroOpeningAnimation({ durationMs = 2600 }) {
         .auro-intro .aiLine{ position:absolute; left:50%; top:50%; width:2px; height:50vmax; margin-left:-1px; margin-top:-50vmax;
           transform-origin:50% 100%; will-change:transform,opacity;
           background:linear-gradient(to top, transparent, var(--c) 32%, var(--c) 60%, transparent);
-          animation: auroTunnel var(--introDur) cubic-bezier(.72,0,.98,.36) both; }
+          animation: auroTunnel var(--introDur) cubic-bezier(.42,0,.88,.32) both; }
         .auro-intro .auroIntroLogo{ position:relative; z-index:2; width:clamp(140px,30vw,300px); height:auto; transform-origin:center center;
           will-change:transform,opacity; backface-visibility:hidden;
-          animation: auroIntroZoom var(--introDur) cubic-bezier(.72,0,.98,.36) both; }
+          animation: auroIntroZoom var(--introDur) cubic-bezier(.42,0,.88,.32) both; }
 
         @media (prefers-reduced-motion: reduce){
           .auro-intro .aiTunnel{ display:none !important; }
