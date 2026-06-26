@@ -2864,51 +2864,15 @@ export default function App() {
     return <AuroOpeningAnimation durationMs={INTRO_DURATION} />;
   }
 
-  // ── Auth gate ──────────────────────────────────────────────────────────────
+    // ── Auth boot ───────────────────────────────────────────────────────────────
+  // Only block while Firebase is checking saved login state.
+  // Do NOT force sign-in before analysis/results.
   if (authState === "loading") return <SplashLoader />;
-  if (authState === "unauthenticated") {
-    return (
-      <AuthScreen
-        onAuthenticated={(user, displayName) => {
-          setFirebaseUser(user);
-          setUserProfile({ name: displayName, email: user.email });
-          setEditName(displayName);
-          setEditEmail(user.email);
-          // Only grant app access if Firebase confirms emailVerified
-          if (user.emailVerified) {
-            setEmailVerified(true);
-            setAuthState("authenticated");
-          } else {
-            setEmailVerified(false);
-            setAuthState("unverified"); // hold on verify screen
-          }
-        }}
-      />
-    );
-  }
 
-  if (authState === "unverified") {
-    // Signed-in but email not verified — full-screen block, nothing else renders
-    return (
-      <VerificationGate
-        email={firebaseUser?.email || userProfile.email}
-        onVerified={() => {
-          setEmailVerified(true);
-          setAuthState("authenticated");
-        }}
-        onSignOut={async () => {
-          try { await firebaseSignOut(); } catch (_) {}
-          setAuthState("unauthenticated");
-        }}
-      />
-    );
-  }
-
-  // ── Analysis gate ───────────────────────────────────────────────────────────
-  // Authenticated (and verified, per the gates above), but analysis not finished:
-  // AnalysisV2 is the ONLY thing rendered — the app shell, bottom nav, and every
-  // other page are withheld until the gate passes. Auth + email-verification gates
-  // run first, so that behaviour is fully preserved.
+    // ── Analysis gate ───────────────────────────────────────────────────────────
+  // AnalysisV2 is shown before auth so users can complete the assessment and see
+  // their results first. Sign-in/verification happens only when they try to start
+  // tracking after results.
   if (!analysisGatePassed) {
     return (
       <>
@@ -3036,15 +3000,90 @@ export default function App() {
              
             {screen === "results" && <Results answers={answers} onReset={() => setScreen("landing")} />}
             {screen === "nav-subscription" && <SubscriptionPage isPremium={isPremium} setIsPremium={setIsPremium} billingCycle={billingCycle} setBillingCycle={setBillingCycle} subLoading={subLoading} setSubLoading={setSubLoading} restoreLoading={restoreLoading} setRestoreLoading={setRestoreLoading} onToast={showToast} />}
-            {screen === "nav-tracking" && (
-              emailVerified
-                ? <TrackingPage isPremium={isPremium} onUpgrade={() => setScreen("nav-subscription")} answers={answers} />
-                : <EmailVerificationScreen email={userProfile.email} onResend={() => showToast("Verification email sent.", "success")} onVerified={async () => { const ok = await checkEmailVerified(); if (ok) { setEmailVerified(true); showToast("Email verified! Welcome to Auro.", "success"); } }} />
+                        {screen === "nav-tracking" && (
+              authState === "unauthenticated" ? (
+                <AuthScreen
+                  onAuthenticated={(user, displayName) => {
+                    setFirebaseUser(user);
+                    setUserProfile({ name: displayName, email: user.email });
+                    setEditName(displayName);
+                    setEditEmail(user.email);
+
+                    if (user.emailVerified) {
+                      setEmailVerified(true);
+                      setAuthState("authenticated");
+                      showToast("Welcome to Auro.", "success");
+                    } else {
+                      setEmailVerified(false);
+                      setAuthState("unverified");
+                      showToast("Verify your email to start tracking.", "info");
+                    }
+                  }}
+                />
+              ) : authState === "unverified" || !emailVerified ? (
+                <EmailVerificationScreen
+                  email={firebaseUser?.email || userProfile.email}
+                  onResend={() => showToast("Verification email sent.", "success")}
+                  onVerified={async () => {
+                    const ok = await checkEmailVerified();
+                    if (ok) {
+                      setEmailVerified(true);
+                      setAuthState("authenticated");
+                      showToast("Email verified! Welcome to Auro.", "success");
+                    }
+                  }}
+                />
+              ) : (
+                <TrackingPage
+                  isPremium={isPremium}
+                  onUpgrade={() => setScreen("nav-subscription")}
+                  answers={answers}
+                />
+              )
             )}
-            {screen === "nav-chat" && (
-              emailVerified
-                ? <AIChatPage isPremium={isPremium} onUpgrade={() => setScreen("nav-subscription")} userProfile={userProfile} userStats={userStats} answers={answers} firebaseUid={firebaseUser?.uid} />
-                : <EmailVerificationScreen email={userProfile.email} onResend={() => showToast("Verification email sent.", "success")} onVerified={async () => { const ok = await checkEmailVerified(); if (ok) { setEmailVerified(true); showToast("Email verified! Welcome to Auro.", "success"); } }} />
+                        {screen === "nav-chat" && (
+              authState === "unauthenticated" ? (
+                <AuthScreen
+                  onAuthenticated={(user, displayName) => {
+                    setFirebaseUser(user);
+                    setUserProfile({ name: displayName, email: user.email });
+                    setEditName(displayName);
+                    setEditEmail(user.email);
+
+                    if (user.emailVerified) {
+                      setEmailVerified(true);
+                      setAuthState("authenticated");
+                      showToast("Welcome to Auro.", "success");
+                    } else {
+                      setEmailVerified(false);
+                      setAuthState("unverified");
+                      showToast("Verify your email to use chat.", "info");
+                    }
+                  }}
+                />
+              ) : authState === "unverified" || !emailVerified ? (
+                <EmailVerificationScreen
+                  email={firebaseUser?.email || userProfile.email}
+                  onResend={() => showToast("Verification email sent.", "success")}
+                  onVerified={async () => {
+                    const ok = await checkEmailVerified();
+                    if (ok) {
+                      setEmailVerified(true);
+                      setAuthState("authenticated");
+                      showToast("Email verified! Welcome to Auro.", "success");
+                    }
+                  }}
+                />
+              ) : (
+                <AIChatPage
+                  isPremium={isPremium}
+                  onUpgrade={() => setScreen("nav-subscription")}
+                  userProfile={userProfile}
+                  userStats={userStats}
+                  answers={answers}
+                  firebaseUid={firebaseUser?.uid}
+                />
+              )
             )}
             {screen === "nav-account" && <AccountPage isPremium={isPremium} billingCycle={billingCycle} subScreen={subScreen} setSubScreen={setSubScreen} userProfile={userProfile} userStats={userStats} notifSettings={notifSettings} setNotifSettings={setNotifSettings} privacySettings={privacySettings} setPrivacySettings={setPrivacySettings} aiSettings={aiSettings} setAiSettings={setAiSettings} editName={editName} setEditName={setEditName} editEmail={editEmail} setEditEmail={setEditEmail} setUserProfile={setUserProfile} onSignOut={handleSignOut} onDeleteAccount={handleDeleteAccount} onToast={showToast} onUpgrade={() => setScreen("nav-subscription")} />}
           </div>
