@@ -230,88 +230,11 @@ function whyCopy(path) {
   return "This is a solid, practical match for where you are now. It's straightforward to start and easy to explain to a first client.";
 }
 
-// ── display-only "fit" reading derived from the existing score (NOT scoring) ─
-// Purely presentational: maps a path score (relative to the top route) into a
-// compatibility %% for the meters. Never feeds back into ranking.
-function fitPercent(path, topScore, rank) {
-  const s = path && typeof path.score === "number" ? path.score : null;
-  if (s !== null && topScore > 0) {
-    return Math.max(62, Math.min(99, Math.round(70 + 29 * (s / topScore))));
-  }
-  return [96, 90, 84][rank] != null ? [96, 90, 84][rank] : 80;
-}
-
-// ── small cockpit primitives ────────────────────────────────────────────────
-function CornerTicks({ color }) {
-  const c = (color || C.border) + "55";
-  const base = { position: "absolute", width: 10, height: 10, pointerEvents: "none", zIndex: 3 };
-  return (
-    <>
-      <span aria-hidden style={{ ...base, top: 7, left: 7, borderTop: `1px solid ${c}`, borderLeft: `1px solid ${c}` }} />
-      <span aria-hidden style={{ ...base, top: 7, right: 7, borderTop: `1px solid ${c}`, borderRight: `1px solid ${c}` }} />
-      <span aria-hidden style={{ ...base, bottom: 7, left: 7, borderBottom: `1px solid ${c}`, borderLeft: `1px solid ${c}` }} />
-      <span aria-hidden style={{ ...base, bottom: 7, right: 7, borderBottom: `1px solid ${c}`, borderRight: `1px solid ${c}` }} />
-    </>
-  );
-}
-
-function CockpitHeader({ label, accent, right }) {
-  return (
-    <div style={St.cockHead}>
-      <span style={{ ...St.cockDot, background: accent, boxShadow: `0 0 8px ${accent}` }} />
-      <span style={{ ...St.cockLabel, color: `${accent}dd` }}>{label}</span>
-      <span style={St.cockRule} />
-      {right ? <span style={St.cockRight}>{right}</span> : null}
-    </div>
-  );
-}
-
-// A centred-axis gauge: a dot sits along a track between two poles (from a
-// derived spectrum position in [-1, 1]). Reads like a cockpit signal meter.
-function SignalGauge({ a, b, pos, accent }) {
-  const pct = Math.max(4, Math.min(96, ((pos + 1) / 2) * 100));
-  return (
-    <div style={St.gauge}>
-      <div style={St.gaugeEnds}><span>{a}</span><span>{b}</span></div>
-      <div style={St.gaugeTrack}>
-        <span aria-hidden style={St.gaugeAxis} />
-        <span aria-hidden style={{ ...St.gaugeDot, left: `${pct}%`, background: accent, boxShadow: `0 0 9px ${accent}` }} />
-      </div>
-    </div>
-  );
-}
-
-function FitMeter({ pct, accent, label }) {
-  return (
-    <div style={St.fitWrap}>
-      <div style={St.fitTop}>
-        <span style={St.fitLabel}>{label}</span>
-        <span style={{ ...St.fitVal, color: accent }}>{pct}%</span>
-      </div>
-      <div style={St.fitTrack}>
-        <span style={{ ...St.fitFill, width: `${pct}%`, background: `linear-gradient(90deg, ${accent}88, ${accent})`, boxShadow: `0 0 12px ${accent}66` }} />
-      </div>
-    </div>
-  );
-}
-
-function Capsule({ label, value, accent }) {
-  return (
-    <div style={St.capsule}>
-      <span aria-hidden style={{ ...St.capTick, background: accent }} />
-      <div style={{ minWidth: 0 }}>
-        <div style={St.capLabel}>{label}</div>
-        <div style={St.capVal}>{value}</div>
-      </div>
-    </div>
-  );
-}
-
 export default function Reveal({ derived, archetype, legacyAnswers, onContinue, history }) {
   const [stage, setStage] = useState("lock"); // 'lock' → 'revealed'
   const [lockLabel, setLockLabel] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0); // default = top pick
-  const [settledIndex, setSettledIndex] = useState(0); // debounced — drives briefing re-entry only
+  const [settledIndex, setSettledIndex] = useState(0); // debounced — drives the detail re-entry only
   const [copied, setCopied] = useState(false); // debug-report copy feedback (temporary)
   const settleTimer = useRef(null);
 
@@ -322,7 +245,8 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
     return () => { clearInterval(labels); clearTimeout(done); };
   }, []);
 
-  // Debounce the briefing re-animation (content still follows selection live).
+  // Debounce the detail re-animation: content follows selection live, but the
+  // entrance only replays ~140ms after a switch settles.
   useEffect(() => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
     settleTimer.current = setTimeout(() => setSettledIndex(selectedIndex), 140);
@@ -336,12 +260,12 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   // V2-native ranking → top 3. (Unchanged: scoring + data flow are untouched.)
   const ranked = scoreV2Paths({ derived, archetype });
   const top3 = ranked.slice(0, 3);
-  const chips = profileChips(derived);
-  const topScore = top3[0] && typeof top3[0].score === "number" ? top3[0].score : 0;
 
   const safeIndex = Math.min(selectedIndex, Math.max(0, top3.length - 1));
   const selectedPath = top3[safeIndex] || null;
-  const selFit = selectedPath ? fitPercent(selectedPath, topScore, safeIndex) : 0;
+  const medal = MEDAL[safeIndex] || MEDAL[0];
+  const detailKey = Math.min(settledIndex, Math.max(0, top3.length - 1));
+  const alts = top3.map((p, i) => ({ p, i })).filter((x) => x.i !== safeIndex);
 
   // ── TEMPORARY developer diagnostic: copy a full debug report to clipboard. ──
   async function handleCopyDebug() {
@@ -370,119 +294,87 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
     }
   }
 
-  // ── Lock / calibration beat → a system scan ───────────────────────────────
+  // ── Lock / calibration beat ────────────────────────────────────────────────
   if (stage === "lock") {
-    const labels = ["Reading your signal", "Locking your profile", "Calibration complete"];
+    const labels = ["Reading your answers", "Finding your matches", "Almost ready"];
     return (
-      <div style={St.scanWrap}>
+      <div style={St.lockWrap}>
+        <RingPulse accent={sty.accent} />
+        <div style={St.lockLabel}>{labels[lockLabel]}</div>
         <Keyframes />
-        <div style={St.scanPanel}>
-          <CornerTicks color={sty.accent} />
-          <CockpitHeader label="SYSTEM SCAN" accent={sty.accent} right="AURO OS" />
-          <div style={St.scanRingWrap}>
-            <RingPulse accent={sty.accent} />
-          </div>
-          <div style={St.scanStatus}>
-            {labels.map((t, i) => (
-              <div key={t} style={{ ...St.scanLine, opacity: i <= lockLabel ? 1 : 0.32 }}>
-                <span style={{ ...St.scanLineDot, background: i <= lockLabel ? sty.accent : C.dim, boxShadow: i <= lockLabel ? `0 0 8px ${sty.accent}` : "none" }} />
-                <span style={St.scanLineText}>{t}</span>
-                <span style={{ ...St.scanLineTick, color: sty.accent, opacity: i < lockLabel ? 1 : 0 }}>{"\u2713"}</span>
-              </div>
-            ))}
-          </div>
-          <div style={St.scanBarTrack}><span style={{ ...St.scanBarFill, background: `linear-gradient(90deg, ${sty.accent}66, ${sty.accent})` }} /></div>
-        </div>
       </div>
     );
   }
 
-  // ── revealed: the Path Command Center ──────────────────────────────────────
-  const gauges = [
-    derived && derived.ownership && { a: "Specialist", b: "Builder", pos: derived.ownership.position },
-    derived && derived.people && { a: "Solo", b: "People", pos: derived.people.position },
-    derived && derived.riskReward && { a: "Steady", b: "Upside", pos: derived.riskReward.position },
-    derived && derived.incomeModel && { a: "Active", b: "Asset", pos: derived.incomeModel.position },
-  ].filter(Boolean);
+  const rankLabel = (i) => (i === 0 ? "Top match" : i === 1 ? "2nd match" : "3rd match");
 
   return (
     <div style={St.wrap}>
       <Keyframes />
 
-      {/* top system bar */}
-      <div style={St.sysBar}>
-        <span style={{ ...St.sysBarDot, background: sty.accent, boxShadow: `0 0 8px ${sty.accent}` }} />
-        <span style={St.sysBarText}>AURO {"\u2022"} PATH COMMAND</span>
-        <span style={St.sysBarRule} />
-        <span style={St.sysBarMeta}>{top3.length} ROUTES</span>
-      </div>
+      {/* 1: Identity reveal — clean, editorial, no card */}
+      <header style={{ ...St.identityWrap, animation: "auroUp .5s ease both" }}>
+        <span aria-hidden style={{ ...St.glyphMark, color: sty.accent }}>{sty.glyph}</span>
+        <div style={{ ...St.kicker, color: `${sty.accent}cc` }}>Your type</div>
+        <h1 style={{ ...St.archTitle, backgroundImage: `linear-gradient(116deg, ${sty.accent2}, ${sty.accent})` }}>{copy.title}</h1>
+        <p style={St.identityLine}>{copy.identity}</p>
+      </header>
 
-      {/* 2: Profile Signal module */}
-      <section style={{ ...St.panel, animation: "auroUp .5s ease both" }}>
-        <span aria-hidden style={St.panelGrid} />
-        <span aria-hidden style={{ ...St.panelGlow, background: `radial-gradient(80% 120% at 88% -10%, ${sty.accent}22, transparent 58%)` }} />
-        <CornerTicks color={sty.accent} />
-        <CockpitHeader label="PROFILE SIGNAL" accent={sty.accent} right="LOCKED" />
-        <div style={St.profTop}>
-          <div style={{ ...St.glyphCell, color: sty.accent, boxShadow: `inset 0 0 0 1px ${sty.accent}40, 0 6px 18px rgba(0,0,0,0.45)` }}>
-            <span aria-hidden style={{ ...St.glyphRing, borderColor: `${sty.accent}55` }} />
-            {sty.glyph}
-          </div>
-          <div style={{ minWidth: 0 }}>
-            <div style={{ ...St.eyebrow, color: `${sty.accent}cc` }}>ARCHETYPE {"\u2014"} {readinessLabel(derived && derived.gates && derived.gates.readiness) || "SIGNATURE"}</div>
-            <h1 style={{ ...St.archTitle, backgroundImage: `linear-gradient(116deg, ${sty.accent2}, ${sty.accent})` }}>{copy.title}</h1>
-          </div>
+      {/* 2: The deck — hero cover + two slim alternates (the one selection mechanic) */}
+      <section style={St.deck}>
+        <div key={detailKey} style={{ ...St.hero, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
+          <span aria-hidden style={{ ...St.heroWash, background: `radial-gradient(120% 80% at 50% -12%, ${medal.accent}26, transparent 62%)` }} />
+          <div style={{ ...St.heroLabel, color: medal.accent }}>{rankLabel(safeIndex)}</div>
+          <h2 style={{ ...St.heroTitle, backgroundImage: `linear-gradient(120deg, ${medal.accent2}, ${medal.accent})` }}>{selectedPath.title}</h2>
+          {selectedPath.summary && <p style={St.heroSummary}>{selectedPath.summary}</p>}
         </div>
-        <p style={St.identity}>{copy.identity}</p>
-        <span aria-hidden style={St.hair} />
-        <p style={St.mirror}>{copy.mirror}</p>
-        {gauges.length > 0 && (
-          <div style={St.gaugeWrap}>
-            {gauges.map((g) => <SignalGauge key={g.a} a={g.a} b={g.b} pos={g.pos} accent={sty.accent} />)}
-          </div>
-        )}
-        {chips.length > 0 && (
-          <div style={St.tagRow}>
-            {chips.map((c) => (
-              <span key={c} style={{ ...St.sigTag, color: sty.accent, borderColor: `${sty.accent}3a`, background: `${sty.accent}12` }}>
-                <span aria-hidden style={{ ...St.sigTagDot, background: sty.accent }} />{c}
-              </span>
-            ))}
+
+        {alts.length > 0 && (
+          <div style={St.altList}>
+            {alts.map(({ p, i }) => {
+              const m = MEDAL[i] || MEDAL[0];
+              return (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setSelectedIndex(i)}
+                  style={St.altRow}
+                  onPointerDown={(e) => { e.currentTarget.style.transform = "scale(0.99)"; }}
+                  onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+                  onPointerLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+                >
+                  <span aria-hidden style={{ ...St.altDot, background: m.accent, boxShadow: `0 0 10px ${m.glow}` }} />
+                  <span style={St.altText}>
+                    <span style={St.altName}>{p.title}</span>
+                    <span style={St.altMeta}>{rankLabel(i)}{p.earnings ? ` \u00b7 ${p.earnings}` : ""}</span>
+                  </span>
+                  <span aria-hidden style={St.altChevron}>{"\u203A"}</span>
+                </button>
+              );
+            })}
           </div>
         )}
       </section>
 
-      {/* 3: Route select */}
-      <CockpitHeader label="RECOMMENDED ROUTES" accent={sty.accent} right="SELECT" />
-      <Podium top3={top3} selectedIndex={safeIndex} onSelect={setSelectedIndex} topScore={topScore} />
+      {/* 3 + 4: Why this fits + practical facts (about the selected path) */}
+      <section key={detailKey + "-d"} style={{ ...St.detail, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
+        <div style={St.whyHead}>Why this fits</div>
+        <p style={St.whyText}>{whyCopy(selectedPath)}</p>
+        <MetaRow path={selectedPath} accent={medal.accent} />
+      </section>
 
-      {/* 4: Route Briefing — keyed so it lightly re-animates when selection settles */}
-      {selectedPath && (
-        <RouteBriefing
-          key={Math.min(settledIndex, Math.max(0, top3.length - 1))}
-          path={selectedPath}
-          medal={MEDAL[safeIndex]}
-          fit={selFit}
-        />
-      )}
-
-      {/* 5: CTA — lock in the route */}
-      {selectedPath && (
-        <div style={St.ctaWrap}>
-          <div style={{ ...St.ctaEyebrow, color: `${MEDAL[safeIndex].accent}cc` }}>{"\u25E2"} LOCK IN ROUTE {"\u2022"} {selFit}% MATCH</div>
-          <button
-            style={{ ...St.cta, backgroundImage: `linear-gradient(135deg, ${MEDAL[safeIndex].accent2}, ${MEDAL[safeIndex].accent})` }}
-            onClick={() => onContinue(selectedPath)}
-            onPointerDown={(e) => { e.currentTarget.style.transform = "scale(0.985)"; }}
-            onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-            onPointerLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-          >
-            <span aria-hidden style={St.ctaSheen} />
-            <span style={St.ctaLabel}>Begin {selectedPath.title} Path</span>
-          </button>
-          <div style={St.ctaSub}>You can explore the other routes anytime.</div>
-        </div>
-      )}
+      {/* 5: CTA */}
+      <button
+        style={{ ...St.cta, backgroundImage: `linear-gradient(135deg, ${medal.accent2}, ${medal.accent})` }}
+        onClick={() => onContinue(selectedPath)}
+        onPointerDown={(e) => { e.currentTarget.style.transform = "scale(0.985)"; }}
+        onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+        onPointerLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+      >
+        <span aria-hidden style={St.ctaSheen} />
+        <span style={St.ctaLabel}>Begin {selectedPath.title} Path</span>
+      </button>
+      <div style={St.ctaSub}>You can explore the other paths anytime.</div>
 
       {/* 6: TEMPORARY developer diagnostic — remove with debugReport.js when done. */}
       <button type="button" style={St.debugBtn} onClick={handleCopyDebug}>
@@ -492,171 +384,23 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   );
 }
 
-// ── Podium: native scroll-snap carousel (mechanics unchanged) ───────────────
-function Podium({ top3, selectedIndex, onSelect, topScore }) {
-  const scrollerRef = useRef(null);
-  const cardRefs = useRef([]);      // refs to the (untransformed) snap wrappers
-  const ticking = useRef(false);    // rAF throttle for the scroll handler
-  const programmatic = useRef(false); // ignore scroll churn during click-centering
-
-  if (!top3.length) return null;
-
-  // Centre the initially-selected card on mount (no animation).
-  useEffect(() => {
-    const el = cardRefs.current[selectedIndex];
-    if (el && el.scrollIntoView) el.scrollIntoView({ inline: "center", block: "nearest" });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  function onScroll() {
-    if (ticking.current) return;
-    ticking.current = true;
-    requestAnimationFrame(() => {
-      ticking.current = false;
-      if (programmatic.current) return;
-      const sc = scrollerRef.current;
-      if (!sc) return;
-      const center = sc.scrollLeft + sc.clientWidth / 2;
-      let best = 0;
-      let bestDist = Infinity;
-      cardRefs.current.forEach((el, i) => {
-        if (!el) return;
-        const cardCenter = el.offsetLeft + el.offsetWidth / 2;
-        const d = Math.abs(cardCenter - center);
-        if (d < bestDist) { bestDist = d; best = i; }
-      });
-      if (best !== selectedIndex) onSelect(best);
-    });
-  }
-
-  function selectCard(i) {
-    onSelect(i);
-    const el = cardRefs.current[i];
-    if (el && el.scrollIntoView) {
-      programmatic.current = true;
-      el.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
-      setTimeout(() => { programmatic.current = false; }, 320);
-    }
-  }
-
-  return (
-    <div style={St.stageWrap}>
-      <div aria-hidden style={St.atmosphere} />
-      <div ref={scrollerRef} className="auroScroller" style={St.scroller} onScroll={onScroll}>
-        {top3.map((path, i) => {
-          const ax = Math.abs(i - selectedIndex);
-          const zi = i === selectedIndex ? 30 : 10 - ax;
-          return (
-            <div key={path.id} ref={(el) => { cardRefs.current[i] = el; }} style={{ ...St.snapItem, zIndex: zi }}>
-              <RouteModule
-                path={path}
-                medal={MEDAL[i]}
-                rank={i}
-                selected={i === selectedIndex}
-                offset={i - selectedIndex}
-                fit={fitPercent(path, topScore, i)}
-                onSelect={() => selectCard(i)}
-              />
-            </div>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
-
-// ── Route module: cockpit card (same transform mechanics, fixed box) ────────
-function RouteModule({ path, medal, rank, selected, offset, fit, onSelect }) {
-  const ax = Math.min(Math.abs(offset), 2);
-  const dir = offset < 0 ? 1 : -1;
-  const scale = selected ? 1.05 : ax === 1 ? 0.86 : 0.82;
-  const tx = selected ? 0 : dir * (ax === 1 ? 8 : 18);
-  const ty = selected ? 0 : 14 + ax * 7;
-  const ry = selected ? 0 : dir * (ax === 1 ? 14 : 20);
-  const op = selected ? 1 : ax === 1 ? 0.97 : 0.93;
-  return (
-    <button
-      type="button"
-      onClick={onSelect}
-      aria-pressed={selected}
-      style={{
-        ...St.routeCard,
-        transform: `translate3d(${tx}px, ${ty}px, 0) scale(${scale}) rotateY(${ry}deg)`,
-        opacity: op,
-        borderColor: selected ? `${medal.accent}88` : `${medal.accent}3a`,
-        background: selected ? medal.cardSel : medal.cardIdle,
-        boxShadow: selected
-          ? `0 22px 52px rgba(0,0,0,0.5), 0 0 44px ${medal.glow}, inset 0 1px 0 ${medal.accent}55, inset 0 -28px 46px rgba(0,0,0,0.4)`
-          : `0 14px 28px rgba(0,0,0,0.48), inset 0 1px 0 ${medal.accent}2a, inset 0 -18px 32px rgba(0,0,0,0.42)`,
-        ...(selected ? { "--glow": medal.glow, "--ring": `${medal.accent}55`, animation: "auroGlow 4.2s ease-in-out infinite" } : null),
-      }}
-    >
-      <span aria-hidden style={St.routeScan} />
-      <span aria-hidden style={{ ...St.routeRail, background: `linear-gradient(180deg, ${medal.accent}, ${medal.accent}00)` }} />
-      {selected && <span aria-hidden style={St.cardSweep} />}
-      <CornerTicks color={medal.accent} />
-
-      <div style={St.routeHead}>
-        <span style={{ ...St.rankMark, color: medal.accent }}>{"\u25E2"} {medal.idx}</span>
-        <span style={{ ...St.routeKind, color: `${medal.accent}d8`, borderColor: `${medal.accent}40` }}>
-          {selected ? "PRIMARY ROUTE" : "ALT ROUTE"}
-        </span>
-      </div>
-
-      <div style={{ ...St.routeName, color: medal.title }}>{path.title}</div>
-
-      <FitMeter pct={fit} accent={medal.accent} label="MATCH" />
-
-      <div style={St.routeCaps}>
-        {path.earnings ? <Capsule label="EST" value={path.earnings} accent={medal.accent} /> : null}
-        {path.timeToFirst ? <Capsule label="PAYDAY" value={path.timeToFirst} accent={medal.accent} /> : null}
-      </div>
-    </button>
-  );
-}
-
-// ── Route Briefing (was PathInfo) ───────────────────────────────────────────
-function RouteBriefing({ path, medal, fit }) {
-  const caps = [
-    path.timeToFirst && { k: "FIRST PAYDAY", v: path.timeToFirst },
-    path.difficulty && { k: "DIFFICULTY", v: path.difficulty },
-    path.earnings && { k: "EST. EARNINGS", v: path.earnings, accent: true },
-    tierLabel(path.tier) && { k: "TRACK", v: tierLabel(path.tier) },
+// ── Clean facts row: first payday · difficulty · est. earnings ──────────────
+function MetaRow({ path, accent }) {
+  const items = [
+    path.timeToFirst && { k: "First payday", v: path.timeToFirst },
+    path.difficulty && { k: "Difficulty", v: cap(path.difficulty) },
+    path.earnings && { k: "Est. earnings", v: path.earnings, accent: true },
   ].filter(Boolean);
-  const chips = reasonChips(path);
+  if (!items.length) return null;
   return (
-    <section style={{ ...St.panel, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
-      <span aria-hidden style={St.panelGrid} />
-      <span aria-hidden style={{ ...St.panelGlow, background: `radial-gradient(90% 110% at 0% 0%, ${medal.accent}1c, transparent 60%)` }} />
-      <CornerTicks color={medal.accent} />
-      <CockpitHeader label="ROUTE BRIEFING" accent={medal.accent} right={`MATCH ${fit}%`} />
-      <h2 style={{ ...St.briefTitle, backgroundImage: `linear-gradient(118deg, ${medal.accent2}, ${medal.accent})` }}>{path.title}</h2>
-      <p style={St.briefWhy}>{whyCopy(path)}</p>
-      <FitMeter pct={fit} accent={medal.accent} label="COMPATIBILITY" />
-      <div style={St.capGrid}>
-        {caps.map((c, i) => (
-          <div key={i} style={St.capCell}>
-            <span aria-hidden style={{ ...St.capTick, background: c.accent ? medal.accent : `${medal.accent}88` }} />
-            <div style={{ minWidth: 0 }}>
-              <div style={St.capLabel}>{c.k}</div>
-              <div style={{ ...St.capVal, color: c.accent ? medal.title : C.text }}>{c.v}</div>
-            </div>
-          </div>
-        ))}
-      </div>
-      {chips.length > 0 && (
-        <div style={St.briefReasons}>
-          <div style={St.miniLabel}>WHY THIS FITS</div>
-          <div style={St.tagRow}>
-            {chips.map((c) => (
-              <span key={c} style={{ ...St.sigTag, color: medal.title, borderColor: `${medal.accent}3a`, background: `${medal.accent}16` }}>
-                <span aria-hidden style={{ ...St.sigTagDot, background: medal.accent }} />{c}
-              </span>
-            ))}
-          </div>
+    <div style={St.metaRow}>
+      {items.map((m, i) => (
+        <div key={m.k} style={{ ...St.metaCell, borderLeft: i === 0 ? "none" : `1px solid ${C.border}` }}>
+          <div style={St.metaKey}>{m.k}</div>
+          <div style={{ ...St.metaVal, color: m.accent ? accent : C.text }}>{m.v}</div>
         </div>
-      )}
-    </section>
+      ))}
+    </div>
   );
 }
 
@@ -673,164 +417,76 @@ function RingPulse({ accent }) {
 function Keyframes() {
   return (
     <style>{`
-      @keyframes auroUp { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes auroUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes auroSpin2 { to { transform: rotate(360deg); } }
       @keyframes auroBreath { 0%,100% { opacity: .5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
-      @keyframes auroGlow {
-        0%,100% { box-shadow: 0 26px 64px rgba(0,0,0,0.6), 0 0 34px var(--glow), inset 0 0 0 1px var(--ring); }
-        50%     { box-shadow: 0 26px 64px rgba(0,0,0,0.6), 0 0 66px var(--glow), inset 0 0 0 1px var(--ring); }
-      }
-      @keyframes auroInfoIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes auroInfoIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes auroSheen { 0% { transform: translateX(-140%) skewX(-18deg); } 55%,100% { transform: translateX(360%) skewX(-18deg); } }
-      @keyframes auroCardSweep { 0% { transform: translateX(-170%) skewX(-14deg); opacity: 0; } 22% { opacity: .5; } 50%,100% { transform: translateX(320%) skewX(-14deg); opacity: 0; } }
-      @keyframes auroScanBar { 0% { transform: translateX(-100%); } 100% { transform: translateX(220%); } }
-      .auroScroller::-webkit-scrollbar { display: none; height: 0; }
     `}</style>
   );
 }
 
-// ── Styles (Auro "command center" idiom) ─────────────────────────────────────
+// ── Styles (Auro — editorial, restrained) ───────────────────────────────────
 const St = {
-  wrap: { width: "100%", maxWidth: 540, display: "flex", flexDirection: "column", gap: 16 },
+  wrap: { width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", gap: 34 },
 
-  // lock / scan
-  scanWrap: { width: "100%", maxWidth: 540, display: "flex", justifyContent: "center", padding: "40px 0" },
-  scanPanel: { position: "relative", width: "100%", maxWidth: 340, overflow: "hidden", borderRadius: 18,
-    border: `1px solid ${C.border}`, padding: "18px 20px 20px",
-    background: "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012))",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 22px 48px rgba(0,0,0,0.45)" },
-  scanRingWrap: { display: "flex", justifyContent: "center", padding: "14px 0 18px" },
-  scanStatus: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 },
-  scanLine: { display: "flex", alignItems: "center", gap: 9, transition: "opacity .3s ease" },
-  scanLineDot: { width: 7, height: 7, borderRadius: 999, flex: "0 0 auto" },
-  scanLineText: { fontSize: 12.5, letterSpacing: 1, color: C.text, flex: 1 },
-  scanLineTick: { fontSize: 12, fontWeight: 800, transition: "opacity .3s ease" },
-  scanBarTrack: { position: "relative", height: 3, borderRadius: 3, overflow: "hidden", background: "rgba(255,255,255,0.06)" },
-  scanBarFill: { position: "absolute", top: 0, bottom: 0, width: "45%", borderRadius: 3, animation: "auroScanBar 1.1s ease-in-out infinite" },
-
+  // lock
+  lockWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 26, padding: "70px 0" },
+  lockLabel: { fontSize: 14, letterSpacing: 1, color: C.dim },
   ringOuter: { position: "relative", width: 84, height: 84 },
   ring: { position: "absolute", inset: 0, borderRadius: "50%", border: `3px solid ${C.border}`, animation: "auroSpin2 0.9s linear infinite" },
   ringDot: { position: "absolute", top: "50%", left: "50%", width: 10, height: 10, borderRadius: "50%", transform: "translate(-50%,-50%)", animation: "auroBreath 1s ease-in-out infinite" },
 
-  // top system bar
-  sysBar: { display: "flex", alignItems: "center", gap: 9, padding: "0 4px" },
-  sysBarDot: { width: 7, height: 7, borderRadius: 999, flex: "0 0 auto" },
-  sysBarText: { fontSize: 11, fontWeight: 800, letterSpacing: 2, color: "rgba(245,246,250,0.78)", fontFamily: "ui-monospace, Menlo, monospace" },
-  sysBarRule: { flex: 1, height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.14), transparent)" },
-  sysBarMeta: { fontSize: 10.5, fontWeight: 700, letterSpacing: 1.5, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace" },
-
-  // generic cockpit panel
-  panel: { position: "relative", overflow: "hidden", borderRadius: 18, border: `1px solid ${C.border}`,
-    padding: "16px 18px 18px",
-    background: "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 20px 44px rgba(0,0,0,0.4)" },
-  panelGrid: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", opacity: 0.5,
-    backgroundImage: "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
-    backgroundSize: "26px 26px", maskImage: "radial-gradient(120% 120% at 50% 0%, #000, transparent 75%)", WebkitMaskImage: "radial-gradient(120% 120% at 50% 0%, #000, transparent 75%)" },
-  panelGlow: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" },
-
-  // cockpit header
-  cockHead: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 8, marginBottom: 12 },
-  cockDot: { width: 6, height: 6, borderRadius: 999, flex: "0 0 auto" },
-  cockLabel: { fontSize: 10.5, fontWeight: 800, letterSpacing: 2, fontFamily: "ui-monospace, Menlo, monospace" },
-  cockRule: { flex: 1, height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.12), transparent)" },
-  cockRight: { fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace" },
-
-  // profile signal
-  profTop: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 14, marginBottom: 12 },
-  glyphCell: { position: "relative", flex: "0 0 auto", width: 52, height: 52, borderRadius: 14, display: "flex",
-    alignItems: "center", justifyContent: "center", fontSize: 24, lineHeight: 1,
-    background: "linear-gradient(160deg, rgba(255,255,255,0.07), rgba(0,0,0,0.3))" },
-  glyphRing: { position: "absolute", inset: 5, borderRadius: 10, border: "1px solid" },
-  eyebrow: { fontSize: 10, fontWeight: 800, letterSpacing: 1.5, marginBottom: 4, fontFamily: "ui-monospace, Menlo, monospace" },
-  archTitle: { fontSize: 27, fontWeight: 900, margin: 0, lineHeight: 1.08, letterSpacing: -0.4,
+  // identity reveal
+  identityWrap: { position: "relative", paddingTop: 6 },
+  glyphMark: { position: "absolute", top: -18, right: -4, fontSize: 96, lineHeight: 1, opacity: 0.08, pointerEvents: "none", userSelect: "none" },
+  kicker: { fontSize: 12.5, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 },
+  archTitle: { fontSize: 38, fontWeight: 900, margin: 0, lineHeight: 1.04, letterSpacing: -0.8,
     WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  identity: { position: "relative", zIndex: 2, fontSize: 15.5, fontWeight: 600, color: C.text, margin: "0 0 12px", lineHeight: 1.4 },
-  hair: { position: "relative", zIndex: 2, display: "block", height: 1, width: "100%", margin: "0 0 12px", background: "linear-gradient(90deg, rgba(255,255,255,0.16), transparent 80%)" },
-  mirror: { position: "relative", zIndex: 2, fontSize: 14, color: "rgba(245,246,250,0.74)", lineHeight: 1.56, margin: "0 0 16px" },
+  identityLine: { fontSize: 17, color: "rgba(245,246,250,0.7)", lineHeight: 1.5, margin: "14px 0 0", maxWidth: 420 },
 
-  // signal gauges
-  gaugeWrap: { position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 16, rowGap: 12, marginBottom: 16 },
-  gauge: { minWidth: 0 },
-  gaugeEnds: { display: "flex", justifyContent: "space-between", fontSize: 9.5, fontWeight: 700, letterSpacing: 0.4, color: C.dim, marginBottom: 5, fontFamily: "ui-monospace, Menlo, monospace" },
-  gaugeTrack: { position: "relative", height: 4, borderRadius: 4, background: "rgba(255,255,255,0.06)" },
-  gaugeAxis: { position: "absolute", left: "50%", top: -2, bottom: -2, width: 1, background: "rgba(255,255,255,0.16)" },
-  gaugeDot: { position: "absolute", top: "50%", width: 9, height: 9, borderRadius: 999, transform: "translate(-50%,-50%)" },
-
-  // tags
-  tagRow: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 7 },
-  sigTag: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 650, letterSpacing: 0.2, padding: "5px 11px", borderRadius: 8, border: "1px solid" },
-  sigTagDot: { width: 5, height: 5, borderRadius: 999, flex: "0 0 auto" },
-
-  // route carousel (geometry unchanged for smooth, mobile-safe scrolling)
-  stageWrap: { position: "relative", width: "100%" },
-  atmosphere: { position: "absolute", inset: "-16% -12% -8%", pointerEvents: "none", zIndex: 0,
-    background: "radial-gradient(58% 60% at 50% 40%, rgba(245,200,66,0.13), transparent 70%), radial-gradient(70% 50% at 50% 6%, rgba(120,150,210,0.06), transparent 62%), radial-gradient(120% 90% at 50% 54%, transparent 58%, rgba(0,0,0,0.34) 100%)" },
-  scroller: { position: "relative", zIndex: 1, display: "flex", flexDirection: "row", flexWrap: "nowrap",
-    alignItems: "center", justifyContent: "flex-start", height: 318, width: "100%",
-    overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", perspective: "1200px",
-    padding: "0 calc(50% - 100px)",
-    maskImage: "linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%)",
-    WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%)",
-    scrollbarWidth: "none", msOverflowStyle: "none" },
-  snapItem: { flex: "0 0 200px", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", scrollSnapAlign: "center", margin: "0 -8px" },
-  routeCard: { position: "relative", width: 230, minHeight: 222, boxSizing: "border-box", overflow: "hidden",
-    padding: "16px 16px 16px 18px", borderRadius: 16, border: "1px solid",
-    textAlign: "left", font: "inherit", color: C.text, cursor: "pointer",
-    display: "flex", flexDirection: "column", gap: 11,
-    transformOrigin: "center", backfaceVisibility: "hidden", willChange: "transform",
-    transition: "transform .42s cubic-bezier(.22,.68,.2,1), box-shadow .35s ease, opacity .35s ease, border-color .35s ease" },
-  routeScan: { position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none", borderRadius: "inherit", opacity: 0.5,
-    backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 4px)",
-    maskImage: "linear-gradient(180deg, #000, transparent 70%)", WebkitMaskImage: "linear-gradient(180deg, #000, transparent 70%)" },
-  routeRail: { position: "absolute", top: 12, bottom: 12, left: 0, width: 3, borderRadius: 3, zIndex: 2, pointerEvents: "none" },
-  cardSweep: { position: "absolute", top: 0, bottom: 0, left: 0, width: "40%", zIndex: 2, pointerEvents: "none",
-    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.12), transparent)", animation: "auroCardSweep 7s ease-in-out infinite" },
-  routeHead: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 8 },
-  rankMark: { fontSize: 12, fontWeight: 800, letterSpacing: 1, fontFamily: "ui-monospace, Menlo, monospace" },
-  routeKind: { fontSize: 8.5, fontWeight: 800, letterSpacing: 1.2, padding: "3px 7px", borderRadius: 6, border: "1px solid", marginLeft: "auto", fontFamily: "ui-monospace, Menlo, monospace" },
-  routeName: { position: "relative", zIndex: 2, fontSize: 17, fontWeight: 850, lineHeight: 1.22, letterSpacing: -0.2,
-    display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" },
-  routeCaps: { position: "relative", zIndex: 2, display: "flex", gap: 8, marginTop: "auto" },
-
-  // fit meter
-  fitWrap: { position: "relative", zIndex: 2 },
-  fitTop: { display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 5 },
-  fitLabel: { fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace" },
-  fitVal: { fontSize: 13, fontWeight: 850, letterSpacing: 0.2 },
-  fitTrack: { position: "relative", height: 5, borderRadius: 5, overflow: "hidden", background: "rgba(255,255,255,0.07)" },
-  fitFill: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 5 },
-
-  // capsules
-  capsule: { flex: "1 1 0", minWidth: 0, display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10,
-    background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` },
-  capTick: { width: 3, height: 22, borderRadius: 3, flex: "0 0 auto" },
-  capLabel: { fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace", whiteSpace: "nowrap" },
-  capVal: { fontSize: 13.5, fontWeight: 800, letterSpacing: -0.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-
-  // briefing
-  briefTitle: { position: "relative", zIndex: 2, fontSize: 22, fontWeight: 850, margin: "2px 0 9px", lineHeight: 1.12, letterSpacing: -0.4,
+  // deck
+  deck: { display: "flex", flexDirection: "column", gap: 12 },
+  hero: { position: "relative", overflow: "hidden", borderRadius: 24, padding: "26px 24px 28px",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 26px 60px rgba(0,0,0,0.44)" },
+  heroWash: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" },
+  heroLabel: { position: "relative", zIndex: 1, fontSize: 13, fontWeight: 750, letterSpacing: 0.4, marginBottom: 10 },
+  heroTitle: { position: "relative", zIndex: 1, fontSize: 29, fontWeight: 850, margin: 0, lineHeight: 1.1, letterSpacing: -0.5,
     WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  briefWhy: { position: "relative", zIndex: 2, fontSize: 14.5, color: C.text, opacity: 0.88, lineHeight: 1.52, margin: "0 0 14px" },
-  capGrid: { position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, margin: "14px 0 16px" },
-  capCell: { display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", borderRadius: 12,
-    background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}` },
-  briefReasons: { position: "relative", zIndex: 2 },
-  miniLabel: { fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.dim, marginBottom: 9, fontFamily: "ui-monospace, Menlo, monospace" },
+  heroSummary: { position: "relative", zIndex: 1, fontSize: 15.5, color: "rgba(245,246,250,0.78)", lineHeight: 1.5, margin: "12px 0 0" },
+
+  // alternates (slim, list-like — not boxes)
+  altList: { display: "flex", flexDirection: "column" },
+  altRow: { display: "flex", alignItems: "center", gap: 14, width: "100%", padding: "15px 6px", background: "transparent",
+    border: "none", borderTop: `1px solid ${C.border}`, textAlign: "left", font: "inherit", color: C.text,
+    cursor: "pointer", transition: "transform .14s ease, opacity .2s ease" },
+  altDot: { flex: "0 0 auto", width: 9, height: 9, borderRadius: "50%" },
+  altText: { display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 },
+  altName: { fontSize: 16, fontWeight: 700, letterSpacing: -0.2, lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+  altMeta: { fontSize: 13, color: C.dim },
+  altChevron: { flex: "0 0 auto", fontSize: 22, color: C.dim, lineHeight: 1 },
+
+  // detail (why + facts)
+  detail: { display: "flex", flexDirection: "column" },
+  whyHead: { fontSize: 12.5, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: C.dim, marginBottom: 12 },
+  whyText: { fontSize: 16.5, color: C.text, opacity: 0.92, lineHeight: 1.58, margin: 0 },
+  metaRow: { display: "flex", marginTop: 24 },
+  metaCell: { flex: 1, display: "flex", flexDirection: "column", gap: 5, padding: "0 16px" },
+  metaKey: { fontSize: 12.5, color: C.dim, letterSpacing: 0.2 },
+  metaVal: { fontSize: 17, fontWeight: 800, letterSpacing: -0.2, lineHeight: 1.2 },
 
   // CTA
-  ctaWrap: { display: "flex", flexDirection: "column", gap: 8 },
-  ctaEyebrow: { fontSize: 10, fontWeight: 800, letterSpacing: 1.5, textAlign: "center", fontFamily: "ui-monospace, Menlo, monospace" },
-  cta: { position: "relative", overflow: "hidden", width: "100%", padding: "16px 22px",
-    borderRadius: 14, border: "none", fontWeight: 850, fontSize: 16, letterSpacing: 0.2,
+  cta: { position: "relative", overflow: "hidden", width: "100%", padding: "18px 22px",
+    borderRadius: 18, border: "none", fontWeight: 850, fontSize: 16.5, letterSpacing: 0.2,
     color: "#120d04", cursor: "pointer", transform: "scale(1)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -3px 9px rgba(0,0,0,0.22), 0 14px 34px rgba(0,0,0,0.4)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -3px 9px rgba(0,0,0,0.22), 0 16px 38px rgba(0,0,0,0.42)",
     transition: "transform .16s ease, filter .18s ease, box-shadow .22s ease" },
   ctaLabel: { position: "relative", zIndex: 1 },
   ctaSheen: { position: "absolute", top: 0, bottom: 0, left: 0, width: "40%", zIndex: 0, pointerEvents: "none",
     background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.42), transparent)", animation: "auroSheen 6s ease-in-out infinite" },
-  ctaSub: { fontSize: 12.5, color: "rgba(245,246,250,0.6)", textAlign: "center" },
-  debugBtn: { width: "100%", marginTop: 6, padding: "9px 12px", borderRadius: 10,
-    border: `1px dashed ${C.border}`, background: "transparent", color: C.dim,
-    fontSize: 12, letterSpacing: 0.5, cursor: "pointer", fontFamily: "ui-monospace, Menlo, monospace" },
+  ctaSub: { fontSize: 13, color: "rgba(245,246,250,0.6)", textAlign: "center", marginTop: -18 },
+  debugBtn: { width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px dashed ${C.border}`,
+    background: "transparent", color: C.dim, fontSize: 12, letterSpacing: 0.5, cursor: "pointer",
+    fontFamily: "ui-monospace, Menlo, monospace", marginTop: -16 },
 };
