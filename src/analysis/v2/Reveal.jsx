@@ -230,11 +230,88 @@ function whyCopy(path) {
   return "This is a solid, practical match for where you are now. It's straightforward to start and easy to explain to a first client.";
 }
 
+// ── display-only "fit" reading derived from the existing score (NOT scoring) ─
+// Purely presentational: maps a path score (relative to the top route) into a
+// compatibility %% for the meters. Never feeds back into ranking.
+function fitPercent(path, topScore, rank) {
+  const s = path && typeof path.score === "number" ? path.score : null;
+  if (s !== null && topScore > 0) {
+    return Math.max(62, Math.min(99, Math.round(70 + 29 * (s / topScore))));
+  }
+  return [96, 90, 84][rank] != null ? [96, 90, 84][rank] : 80;
+}
+
+// ── small cockpit primitives ────────────────────────────────────────────────
+function CornerTicks({ color }) {
+  const c = (color || C.border) + "55";
+  const base = { position: "absolute", width: 10, height: 10, pointerEvents: "none", zIndex: 3 };
+  return (
+    <>
+      <span aria-hidden style={{ ...base, top: 7, left: 7, borderTop: `1px solid ${c}`, borderLeft: `1px solid ${c}` }} />
+      <span aria-hidden style={{ ...base, top: 7, right: 7, borderTop: `1px solid ${c}`, borderRight: `1px solid ${c}` }} />
+      <span aria-hidden style={{ ...base, bottom: 7, left: 7, borderBottom: `1px solid ${c}`, borderLeft: `1px solid ${c}` }} />
+      <span aria-hidden style={{ ...base, bottom: 7, right: 7, borderBottom: `1px solid ${c}`, borderRight: `1px solid ${c}` }} />
+    </>
+  );
+}
+
+function CockpitHeader({ label, accent, right }) {
+  return (
+    <div style={St.cockHead}>
+      <span style={{ ...St.cockDot, background: accent, boxShadow: `0 0 8px ${accent}` }} />
+      <span style={{ ...St.cockLabel, color: `${accent}dd` }}>{label}</span>
+      <span style={St.cockRule} />
+      {right ? <span style={St.cockRight}>{right}</span> : null}
+    </div>
+  );
+}
+
+// A centred-axis gauge: a dot sits along a track between two poles (from a
+// derived spectrum position in [-1, 1]). Reads like a cockpit signal meter.
+function SignalGauge({ a, b, pos, accent }) {
+  const pct = Math.max(4, Math.min(96, ((pos + 1) / 2) * 100));
+  return (
+    <div style={St.gauge}>
+      <div style={St.gaugeEnds}><span>{a}</span><span>{b}</span></div>
+      <div style={St.gaugeTrack}>
+        <span aria-hidden style={St.gaugeAxis} />
+        <span aria-hidden style={{ ...St.gaugeDot, left: `${pct}%`, background: accent, boxShadow: `0 0 9px ${accent}` }} />
+      </div>
+    </div>
+  );
+}
+
+function FitMeter({ pct, accent, label }) {
+  return (
+    <div style={St.fitWrap}>
+      <div style={St.fitTop}>
+        <span style={St.fitLabel}>{label}</span>
+        <span style={{ ...St.fitVal, color: accent }}>{pct}%</span>
+      </div>
+      <div style={St.fitTrack}>
+        <span style={{ ...St.fitFill, width: `${pct}%`, background: `linear-gradient(90deg, ${accent}88, ${accent})`, boxShadow: `0 0 12px ${accent}66` }} />
+      </div>
+    </div>
+  );
+}
+
+function Capsule({ label, value, accent }) {
+  return (
+    <div style={St.capsule}>
+      <span aria-hidden style={{ ...St.capTick, background: accent }} />
+      <div style={{ minWidth: 0 }}>
+        <div style={St.capLabel}>{label}</div>
+        <div style={St.capVal}>{value}</div>
+      </div>
+    </div>
+  );
+}
+
 export default function Reveal({ derived, archetype, legacyAnswers, onContinue, history }) {
   const [stage, setStage] = useState("lock"); // 'lock' → 'revealed'
   const [lockLabel, setLockLabel] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0); // default = top pick
-  const [settledIndex, setSettledIndex] = useState(0); // debounced — drives PathInfo re-entry only
+  const [settledIndex, setSettledIndex] = useState(0); // debounced — drives briefing re-entry only
   const [copied, setCopied] = useState(false); // debug-report copy feedback (temporary)
   const settleTimer = useRef(null);
 
@@ -245,9 +322,7 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
     return () => { clearInterval(labels); clearTimeout(done); };
   }, []);
 
-  // Debounce the Path Detail re-animation: its CONTENT follows selection live
-  // (below), but the entrance animation only replays ~140ms after scrolling
-  // settles, so it doesn't re-trigger on every card crossed mid-scroll.
+  // Debounce the briefing re-animation (content still follows selection live).
   useEffect(() => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
     settleTimer.current = setTimeout(() => setSettledIndex(selectedIndex), 140);
@@ -258,13 +333,15 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   const copy = ARCHETYPES[key] || ARCHETYPES.specialist;
   const sty = styleFor(key);
 
-  // V2-native ranking → top 3 for the podium.
+  // V2-native ranking → top 3. (Unchanged: scoring + data flow are untouched.)
   const ranked = scoreV2Paths({ derived, archetype });
   const top3 = ranked.slice(0, 3);
   const chips = profileChips(derived);
+  const topScore = top3[0] && typeof top3[0].score === "number" ? top3[0].score : 0;
 
   const safeIndex = Math.min(selectedIndex, Math.max(0, top3.length - 1));
   const selectedPath = top3[safeIndex] || null;
+  const selFit = selectedPath ? fitPercent(selectedPath, topScore, safeIndex) : 0;
 
   // ── TEMPORARY developer diagnostic: copy a full debug report to clipboard. ──
   async function handleCopyDebug() {
@@ -293,75 +370,119 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
     }
   }
 
+  // ── Lock / calibration beat → a system scan ───────────────────────────────
   if (stage === "lock") {
-    const labels = ["Reading your signal…", "Locking your profile…", "Calibration complete"];
+    const labels = ["Reading your signal", "Locking your profile", "Calibration complete"];
     return (
-      <div style={St.lockWrap}>
-        <RingPulse accent={sty.accent} />
-        <div style={St.lockLabel}>{labels[lockLabel]}</div>
+      <div style={St.scanWrap}>
         <Keyframes />
+        <div style={St.scanPanel}>
+          <CornerTicks color={sty.accent} />
+          <CockpitHeader label="SYSTEM SCAN" accent={sty.accent} right="AURO OS" />
+          <div style={St.scanRingWrap}>
+            <RingPulse accent={sty.accent} />
+          </div>
+          <div style={St.scanStatus}>
+            {labels.map((t, i) => (
+              <div key={t} style={{ ...St.scanLine, opacity: i <= lockLabel ? 1 : 0.32 }}>
+                <span style={{ ...St.scanLineDot, background: i <= lockLabel ? sty.accent : C.dim, boxShadow: i <= lockLabel ? `0 0 8px ${sty.accent}` : "none" }} />
+                <span style={St.scanLineText}>{t}</span>
+                <span style={{ ...St.scanLineTick, color: sty.accent, opacity: i < lockLabel ? 1 : 0 }}>{"\u2713"}</span>
+              </div>
+            ))}
+          </div>
+          <div style={St.scanBarTrack}><span style={{ ...St.scanBarFill, background: `linear-gradient(90deg, ${sty.accent}66, ${sty.accent})` }} /></div>
+        </div>
       </div>
     );
   }
+
+  // ── revealed: the Path Command Center ──────────────────────────────────────
+  const gauges = [
+    derived && derived.ownership && { a: "Specialist", b: "Builder", pos: derived.ownership.position },
+    derived && derived.people && { a: "Solo", b: "People", pos: derived.people.position },
+    derived && derived.riskReward && { a: "Steady", b: "Upside", pos: derived.riskReward.position },
+    derived && derived.incomeModel && { a: "Active", b: "Asset", pos: derived.incomeModel.position },
+  ].filter(Boolean);
 
   return (
     <div style={St.wrap}>
       <Keyframes />
 
-      {/* 2: Archetype Info card */}
-      <div style={{ ...St.archCard, animation: "auroUp .5s ease both" }}>
-        <div aria-hidden style={{ ...St.archTexture, background: `radial-gradient(80% 120% at 88% -10%, ${sty.accent}1f, transparent 58%), radial-gradient(60% 100% at 0% 110%, ${sty.accent}12, transparent 60%)` }} />
-        <div style={St.archTopRow}>
-          <div style={{ ...St.archMedallion, color: sty.accent, boxShadow: `inset 0 1px 0 ${sty.accent}55, inset 0 0 0 1px ${sty.accent}33, 0 6px 16px rgba(0,0,0,0.4)` }}>
+      {/* top system bar */}
+      <div style={St.sysBar}>
+        <span style={{ ...St.sysBarDot, background: sty.accent, boxShadow: `0 0 8px ${sty.accent}` }} />
+        <span style={St.sysBarText}>AURO {"\u2022"} PATH COMMAND</span>
+        <span style={St.sysBarRule} />
+        <span style={St.sysBarMeta}>{top3.length} ROUTES</span>
+      </div>
+
+      {/* 2: Profile Signal module */}
+      <section style={{ ...St.panel, animation: "auroUp .5s ease both" }}>
+        <span aria-hidden style={St.panelGrid} />
+        <span aria-hidden style={{ ...St.panelGlow, background: `radial-gradient(80% 120% at 88% -10%, ${sty.accent}22, transparent 58%)` }} />
+        <CornerTicks color={sty.accent} />
+        <CockpitHeader label="PROFILE SIGNAL" accent={sty.accent} right="LOCKED" />
+        <div style={St.profTop}>
+          <div style={{ ...St.glyphCell, color: sty.accent, boxShadow: `inset 0 0 0 1px ${sty.accent}40, 0 6px 18px rgba(0,0,0,0.45)` }}>
+            <span aria-hidden style={{ ...St.glyphRing, borderColor: `${sty.accent}55` }} />
             {sty.glyph}
           </div>
-          <div style={St.archTopText}>
-            <div style={{ ...St.archKicker, color: `${sty.accent}cc` }}>YOUR ARCHETYPE</div>
-            <h1 style={{ ...St.archTitle, backgroundImage: `linear-gradient(116deg, ${sty.accent2}, ${sty.accent})` }}>
-              {copy.title}
-            </h1>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ ...St.eyebrow, color: `${sty.accent}cc` }}>ARCHETYPE {"\u2014"} {readinessLabel(derived && derived.gates && derived.gates.readiness) || "SIGNATURE"}</div>
+            <h1 style={{ ...St.archTitle, backgroundImage: `linear-gradient(116deg, ${sty.accent2}, ${sty.accent})` }}>{copy.title}</h1>
           </div>
         </div>
         <p style={St.identity}>{copy.identity}</p>
-        <span aria-hidden style={{ ...St.archHair, background: `linear-gradient(90deg, ${sty.accent}40, transparent 80%)` }} />
+        <span aria-hidden style={St.hair} />
         <p style={St.mirror}>{copy.mirror}</p>
+        {gauges.length > 0 && (
+          <div style={St.gaugeWrap}>
+            {gauges.map((g) => <SignalGauge key={g.a} a={g.a} b={g.b} pos={g.pos} accent={sty.accent} />)}
+          </div>
+        )}
         {chips.length > 0 && (
-          <div style={St.chips}>
+          <div style={St.tagRow}>
             {chips.map((c) => (
-              <span key={c} style={{ ...St.chip, borderColor: `${sty.accent}3a`, color: sty.accent, background: `${sty.accent}12` }}>{c}</span>
+              <span key={c} style={{ ...St.sigTag, color: sty.accent, borderColor: `${sty.accent}3a`, background: `${sty.accent}12` }}>
+                <span aria-hidden style={{ ...St.sigTagDot, background: sty.accent }} />{c}
+              </span>
             ))}
           </div>
         )}
-      </div>
+      </section>
 
-      {/* 3: Podium */}
-      <div style={St.sectionHead}>
-        <span style={St.sectionRule} />
-        <span style={St.sectionText}>SELECT PATH</span>
-        <span style={St.sectionRule} />
-      </div>
-      <Podium top3={top3} selectedIndex={safeIndex} onSelect={setSelectedIndex} />
+      {/* 3: Route select */}
+      <CockpitHeader label="RECOMMENDED ROUTES" accent={sty.accent} right="SELECT" />
+      <Podium top3={top3} selectedIndex={safeIndex} onSelect={setSelectedIndex} topScore={topScore} />
 
-      {/* 4: Path Info — keyed so it lightly re-animates when the selection changes */}
-      {selectedPath && <PathInfo key={Math.min(settledIndex, Math.max(0, top3.length - 1))} path={selectedPath} medal={MEDAL[safeIndex]} />}
-
-      {/* 5: CTA */}
+      {/* 4: Route Briefing — keyed so it lightly re-animates when selection settles */}
       {selectedPath && (
-        <button
-          style={{
-            ...St.cta,
-            backgroundImage: `linear-gradient(135deg, ${MEDAL[safeIndex].accent2}, ${MEDAL[safeIndex].accent})`,
-          }}
-          onClick={() => onContinue(selectedPath)}
-          onPointerDown={(e) => { e.currentTarget.style.transform = "scale(0.985)"; }}
-          onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-          onPointerLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-        >
-          <span aria-hidden style={St.ctaSheen} />
-          <span style={St.ctaLabel}>Begin {selectedPath.title} Path</span>
-        </button>
+        <RouteBriefing
+          key={Math.min(settledIndex, Math.max(0, top3.length - 1))}
+          path={selectedPath}
+          medal={MEDAL[safeIndex]}
+          fit={selFit}
+        />
       )}
-      <div style={St.ctaSub}>You can explore the other paths anytime.</div>
+
+      {/* 5: CTA — lock in the route */}
+      {selectedPath && (
+        <div style={St.ctaWrap}>
+          <div style={{ ...St.ctaEyebrow, color: `${MEDAL[safeIndex].accent}cc` }}>{"\u25E2"} LOCK IN ROUTE {"\u2022"} {selFit}% MATCH</div>
+          <button
+            style={{ ...St.cta, backgroundImage: `linear-gradient(135deg, ${MEDAL[safeIndex].accent2}, ${MEDAL[safeIndex].accent})` }}
+            onClick={() => onContinue(selectedPath)}
+            onPointerDown={(e) => { e.currentTarget.style.transform = "scale(0.985)"; }}
+            onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+            onPointerLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
+          >
+            <span aria-hidden style={St.ctaSheen} />
+            <span style={St.ctaLabel}>Begin {selectedPath.title} Path</span>
+          </button>
+          <div style={St.ctaSub}>You can explore the other routes anytime.</div>
+        </div>
+      )}
 
       {/* 6: TEMPORARY developer diagnostic — remove with debugReport.js when done. */}
       <button type="button" style={St.debugBtn} onClick={handleCopyDebug}>
@@ -371,12 +492,8 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   );
 }
 
-// ── Podium: native scroll-snap carousel with a coverflow LOOK ───────────────
-// Mechanics are the real scroll-snap version (two-finger trackpad scroll + touch
-// swipe feel native). The flat row is dressed up to read as a podium: the
-// centred card is full-size, glowing and forward; the others scale down, tuck
-// toward centre, tilt back (perspective), dim, and drop behind via z-index.
-function Podium({ top3, selectedIndex, onSelect }) {
+// ── Podium: native scroll-snap carousel (mechanics unchanged) ───────────────
+function Podium({ top3, selectedIndex, onSelect, topScore }) {
   const scrollerRef = useRef(null);
   const cardRefs = useRef([]);      // refs to the (untransformed) snap wrappers
   const ticking = useRef(false);    // rAF throttle for the scroll handler
@@ -391,13 +508,12 @@ function Podium({ top3, selectedIndex, onSelect }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // The card whose centre is nearest the viewport centre becomes selected.
   function onScroll() {
     if (ticking.current) return;
     ticking.current = true;
     requestAnimationFrame(() => {
       ticking.current = false;
-      if (programmatic.current) return; // a click is smooth-centering; don't fight it
+      if (programmatic.current) return;
       const sc = scrollerRef.current;
       if (!sc) return;
       const center = sc.scrollLeft + sc.clientWidth / 2;
@@ -405,7 +521,7 @@ function Podium({ top3, selectedIndex, onSelect }) {
       let bestDist = Infinity;
       cardRefs.current.forEach((el, i) => {
         if (!el) return;
-        const cardCenter = el.offsetLeft + el.offsetWidth / 2; // layout, transform-free
+        const cardCenter = el.offsetLeft + el.offsetWidth / 2;
         const d = Math.abs(cardCenter - center);
         if (d < bestDist) { bestDist = d; best = i; }
       });
@@ -413,7 +529,6 @@ function Podium({ top3, selectedIndex, onSelect }) {
     });
   }
 
-  // Tap / click a card → select it and smooth-centre it.
   function selectCard(i) {
     onSelect(i);
     const el = cardRefs.current[i];
@@ -430,22 +545,16 @@ function Podium({ top3, selectedIndex, onSelect }) {
       <div ref={scrollerRef} className="auroScroller" style={St.scroller} onScroll={onScroll}>
         {top3.map((path, i) => {
           const ax = Math.abs(i - selectedIndex);
-          // Flex items honor z-index even when statically positioned, so stacking
-          // the WRAPPER guarantees the selected card paints in front of its
-          // overlapping neighbours (a static card's z-index would be ignored).
           const zi = i === selectedIndex ? 30 : 10 - ax;
           return (
-            <div
-              key={path.id}
-              ref={(el) => { cardRefs.current[i] = el; }}
-              style={{ ...St.snapItem, zIndex: zi }}
-            >
-              <PodiumCard
+            <div key={path.id} ref={(el) => { cardRefs.current[i] = el; }} style={{ ...St.snapItem, zIndex: zi }}>
+              <RouteModule
                 path={path}
                 medal={MEDAL[i]}
                 rank={i}
                 selected={i === selectedIndex}
                 offset={i - selectedIndex}
+                fit={fitPercent(path, topScore, i)}
                 onSelect={() => selectCard(i)}
               />
             </div>
@@ -456,126 +565,98 @@ function Podium({ top3, selectedIndex, onSelect }) {
   );
 }
 
-// Soft embossed rank medallion — the quiet identity mark of a collectible card.
-function Medallion({ medal }) {
-  return (
-    <span
-      style={{
-        ...St.medallion,
-        color: medal.accent,
-        background: `radial-gradient(120% 120% at 30% 20%, ${medal.accent}2e, rgba(0,0,0,0.28))`,
-        boxShadow: `inset 0 1px 0 ${medal.accent}66, inset 0 0 0 1px ${medal.accent}33, 0 3px 8px rgba(0,0,0,0.4)`,
-      }}
-    >
-      {medal.idx}
-    </span>
-  );
-}
-
-function PodiumCard({ path, medal, rank, selected, offset, onSelect }) {
-  // SMOOTHNESS: every card keeps an IDENTICAL layout box (width / min-height /
-  // padding / radius / border are constant). The hero vs side difference is
-  // expressed only through GPU-friendly transform / opacity / shadow / colour,
-  // so nothing reflows the scroll track while scrolling. The box is sized for
-  // the hero's content at all times, so showing the summary causes no shift.
-  const ax = Math.min(Math.abs(offset), 2);   // distance from selected (0,1,2)
-  const dir = offset < 0 ? 1 : -1;            // left cards shift right; right cards shift left
-  const scale = selected ? 1.05 : ax === 1 ? 0.86 : 0.82; // hierarchy via scale, not width
+// ── Route module: cockpit card (same transform mechanics, fixed box) ────────
+function RouteModule({ path, medal, rank, selected, offset, fit, onSelect }) {
+  const ax = Math.min(Math.abs(offset), 2);
+  const dir = offset < 0 ? 1 : -1;
+  const scale = selected ? 1.05 : ax === 1 ? 0.86 : 0.82;
   const tx = selected ? 0 : dir * (ax === 1 ? 8 : 18);
   const ty = selected ? 0 : 14 + ax * 7;
   const ry = selected ? 0 : dir * (ax === 1 ? 14 : 20);
   const op = selected ? 1 : ax === 1 ? 0.97 : 0.93;
-
   return (
     <button
       type="button"
       onClick={onSelect}
       aria-pressed={selected}
       style={{
-        ...St.podCard,
+        ...St.routeCard,
         transform: `translate3d(${tx}px, ${ty}px, 0) scale(${scale}) rotateY(${ry}deg)`,
         opacity: op,
-        borderColor: selected ? `${medal.accent}88` : `${medal.accent}44`,
+        borderColor: selected ? `${medal.accent}88` : `${medal.accent}3a`,
         background: selected ? medal.cardSel : medal.cardIdle,
         boxShadow: selected
           ? `0 22px 52px rgba(0,0,0,0.5), 0 0 44px ${medal.glow}, inset 0 1px 0 ${medal.accent}55, inset 0 -28px 46px rgba(0,0,0,0.4)`
           : `0 14px 28px rgba(0,0,0,0.48), inset 0 1px 0 ${medal.accent}2a, inset 0 -18px 32px rgba(0,0,0,0.42)`,
-        ...(selected
-          ? { "--glow": medal.glow, "--ring": `${medal.accent}55`, animation: "auroGlow 4.2s ease-in-out infinite" }
-          : null),
+        ...(selected ? { "--glow": medal.glow, "--ring": `${medal.accent}55`, animation: "auroGlow 4.2s ease-in-out infinite" } : null),
       }}
     >
-      {/* one soft top sheen + (hero only) a slow light pass — no scanlines/brackets */}
-      <span aria-hidden style={St.cardGloss} />
+      <span aria-hidden style={St.routeScan} />
+      <span aria-hidden style={{ ...St.routeRail, background: `linear-gradient(180deg, ${medal.accent}, ${medal.accent}00)` }} />
       {selected && <span aria-hidden style={St.cardSweep} />}
+      <CornerTicks color={medal.accent} />
 
-      <div style={St.cardHead}>
-        <Medallion medal={medal} />
-        <span style={{ ...St.medalLabel, color: `${medal.accent}d8` }}>{medal.label}</span>
+      <div style={St.routeHead}>
+        <span style={{ ...St.rankMark, color: medal.accent }}>{"\u25E2"} {medal.idx}</span>
+        <span style={{ ...St.routeKind, color: `${medal.accent}d8`, borderColor: `${medal.accent}40` }}>
+          {selected ? "PRIMARY ROUTE" : "ALT ROUTE"}
+        </span>
       </div>
 
-      <div style={{ ...St.podName, color: medal.title }}>{path.title}</div>
+      <div style={{ ...St.routeName, color: medal.title }}>{path.title}</div>
 
-      {/* content is conditional but the box height is fixed, so no track shift */}
-      {selected && path.summary && (
-        <div style={{ ...St.podSummary, color: medal.body }}>{path.summary}</div>
-      )}
-      {selected && path.earnings && (
-        <div style={St.cardMetaRow}>
-          <span style={{ ...St.cardMetaLabel, color: `${medal.accent}b0` }}>Est. earnings</span>
-          <span style={{ ...St.cardMetaVal, color: medal.title }}>{path.earnings}</span>
-        </div>
-      )}
+      <FitMeter pct={fit} accent={medal.accent} label="MATCH" />
+
+      <div style={St.routeCaps}>
+        {path.earnings ? <Capsule label="EST" value={path.earnings} accent={medal.accent} /> : null}
+        {path.timeToFirst ? <Capsule label="PAYDAY" value={path.timeToFirst} accent={medal.accent} /> : null}
+      </div>
     </button>
   );
 }
 
-// ── Path Info → personalized route briefing ─────────────────────────────────
-function PathInfo({ path, medal }) {
-  const meta = [
-    path.earnings && { k: "Est. earnings", v: path.earnings, accent: true },
-    path.timeToFirst && { k: "First payday", v: path.timeToFirst },
-    path.difficulty && { k: "Level", v: path.difficulty },
-    tierLabel(path.tier) && { k: "Track", v: tierLabel(path.tier) },
+// ── Route Briefing (was PathInfo) ───────────────────────────────────────────
+function RouteBriefing({ path, medal, fit }) {
+  const caps = [
+    path.timeToFirst && { k: "FIRST PAYDAY", v: path.timeToFirst },
+    path.difficulty && { k: "DIFFICULTY", v: path.difficulty },
+    path.earnings && { k: "EST. EARNINGS", v: path.earnings, accent: true },
+    tierLabel(path.tier) && { k: "TRACK", v: tierLabel(path.tier) },
   ].filter(Boolean);
   const chips = reasonChips(path);
-
   return (
-    <div style={{ ...St.infoCard, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
-      <span aria-hidden style={{ ...St.infoTopGlow, background: `radial-gradient(90% 100% at 0% 0%, ${medal.accent}16, transparent 62%)` }} />
-
-      <div style={St.infoHeadRow}>
-        <span style={{ ...St.infoDot, background: medal.accent, boxShadow: `0 0 10px ${medal.glow}` }} />
-        <span style={{ ...St.infoKicker, color: `${medal.accent}cc` }}>Your route</span>
-      </div>
-
-      <h2 style={{ ...St.infoTitle, backgroundImage: `linear-gradient(118deg, ${medal.accent2}, ${medal.accent})` }}>
-        {path.title}
-      </h2>
-      <p style={St.infoWhy}>{whyCopy(path)}</p>
-
-      <div style={St.metaGrid}>
-        {meta.map((m, i) => (
-          <div key={i} style={St.metaItem}>
-            <span style={St.metaKey}>{m.k}</span>
-            <span style={{ ...St.metaVal, color: m.accent ? medal.title : C.text }}>{m.v}</span>
+    <section style={{ ...St.panel, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
+      <span aria-hidden style={St.panelGrid} />
+      <span aria-hidden style={{ ...St.panelGlow, background: `radial-gradient(90% 110% at 0% 0%, ${medal.accent}1c, transparent 60%)` }} />
+      <CornerTicks color={medal.accent} />
+      <CockpitHeader label="ROUTE BRIEFING" accent={medal.accent} right={`MATCH ${fit}%`} />
+      <h2 style={{ ...St.briefTitle, backgroundImage: `linear-gradient(118deg, ${medal.accent2}, ${medal.accent})` }}>{path.title}</h2>
+      <p style={St.briefWhy}>{whyCopy(path)}</p>
+      <FitMeter pct={fit} accent={medal.accent} label="COMPATIBILITY" />
+      <div style={St.capGrid}>
+        {caps.map((c, i) => (
+          <div key={i} style={St.capCell}>
+            <span aria-hidden style={{ ...St.capTick, background: c.accent ? medal.accent : `${medal.accent}88` }} />
+            <div style={{ minWidth: 0 }}>
+              <div style={St.capLabel}>{c.k}</div>
+              <div style={{ ...St.capVal, color: c.accent ? medal.title : C.text }}>{c.v}</div>
+            </div>
           </div>
         ))}
       </div>
-
       {chips.length > 0 && (
-        <div style={St.reasonWrap}>
-          <div style={St.sysLabel}>Why this fits you</div>
-          <div style={St.reasonRow}>
+        <div style={St.briefReasons}>
+          <div style={St.miniLabel}>WHY THIS FITS</div>
+          <div style={St.tagRow}>
             {chips.map((c) => (
-              <span key={c} style={{ ...St.reasonChip, color: medal.title, background: `${medal.accent}16`, boxShadow: `inset 0 0 0 1px ${medal.accent}33` }}>
-                {c}
+              <span key={c} style={{ ...St.sigTag, color: medal.title, borderColor: `${medal.accent}3a`, background: `${medal.accent}16` }}>
+                <span aria-hidden style={{ ...St.sigTagDot, background: medal.accent }} />{c}
               </span>
             ))}
           </div>
         </div>
       )}
-    </div>
+    </section>
   );
 }
 
@@ -602,131 +683,152 @@ function Keyframes() {
       @keyframes auroInfoIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes auroSheen { 0% { transform: translateX(-140%) skewX(-18deg); } 55%,100% { transform: translateX(360%) skewX(-18deg); } }
       @keyframes auroCardSweep { 0% { transform: translateX(-170%) skewX(-14deg); opacity: 0; } 22% { opacity: .5; } 50%,100% { transform: translateX(320%) skewX(-14deg); opacity: 0; } }
+      @keyframes auroScanBar { 0% { transform: translateX(-100%); } 100% { transform: translateX(220%); } }
       .auroScroller::-webkit-scrollbar { display: none; height: 0; }
     `}</style>
   );
 }
 
-// ── Styles (Auro idiom) ──────────────────────────────────────────────────────
+// ── Styles (Auro "command center" idiom) ─────────────────────────────────────
 const St = {
   wrap: { width: "100%", maxWidth: 540, display: "flex", flexDirection: "column", gap: 16 },
 
-  lockWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 26, padding: "60px 0" },
-  lockLabel: { fontSize: 13, letterSpacing: 3, color: C.dim, textTransform: "uppercase" },
+  // lock / scan
+  scanWrap: { width: "100%", maxWidth: 540, display: "flex", justifyContent: "center", padding: "40px 0" },
+  scanPanel: { position: "relative", width: "100%", maxWidth: 340, overflow: "hidden", borderRadius: 18,
+    border: `1px solid ${C.border}`, padding: "18px 20px 20px",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.012))",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 22px 48px rgba(0,0,0,0.45)" },
+  scanRingWrap: { display: "flex", justifyContent: "center", padding: "14px 0 18px" },
+  scanStatus: { display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 },
+  scanLine: { display: "flex", alignItems: "center", gap: 9, transition: "opacity .3s ease" },
+  scanLineDot: { width: 7, height: 7, borderRadius: 999, flex: "0 0 auto" },
+  scanLineText: { fontSize: 12.5, letterSpacing: 1, color: C.text, flex: 1 },
+  scanLineTick: { fontSize: 12, fontWeight: 800, transition: "opacity .3s ease" },
+  scanBarTrack: { position: "relative", height: 3, borderRadius: 3, overflow: "hidden", background: "rgba(255,255,255,0.06)" },
+  scanBarFill: { position: "absolute", top: 0, bottom: 0, width: "45%", borderRadius: 3, animation: "auroScanBar 1.1s ease-in-out infinite" },
+
   ringOuter: { position: "relative", width: 84, height: 84 },
-  ring: { position: "absolute", inset: 0, borderRadius: "50%", border: `3px solid ${C.border}`,
-    animation: "auroSpin2 0.9s linear infinite" },
-  ringDot: { position: "absolute", top: "50%", left: "50%", width: 10, height: 10, borderRadius: "50%",
-    transform: "translate(-50%,-50%)", animation: "auroBreath 1s ease-in-out infinite" },
+  ring: { position: "absolute", inset: 0, borderRadius: "50%", border: `3px solid ${C.border}`, animation: "auroSpin2 0.9s linear infinite" },
+  ringDot: { position: "absolute", top: "50%", left: "50%", width: 10, height: 10, borderRadius: "50%", transform: "translate(-50%,-50%)", animation: "auroBreath 1s ease-in-out infinite" },
 
-  // Archetype card → soft identity plate (editorial, asymmetric)
-  archCard: { position: "relative", overflow: "hidden",
-    background:
-      "radial-gradient(130% 80% at 50% -10%, rgba(255,255,255,0.05), transparent 60%)," +
-      "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))",
-    border: `1px solid ${C.border}`, borderRadius: "26px 26px 22px 20px", padding: "24px 24px 22px",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 22px 48px rgba(0,0,0,0.42)" },
-  archTexture: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" },
-  archTopRow: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 14, marginBottom: 14 },
-  archMedallion: { flex: "0 0 auto", width: 48, height: 48, borderRadius: 16, display: "flex",
+  // top system bar
+  sysBar: { display: "flex", alignItems: "center", gap: 9, padding: "0 4px" },
+  sysBarDot: { width: 7, height: 7, borderRadius: 999, flex: "0 0 auto" },
+  sysBarText: { fontSize: 11, fontWeight: 800, letterSpacing: 2, color: "rgba(245,246,250,0.78)", fontFamily: "ui-monospace, Menlo, monospace" },
+  sysBarRule: { flex: 1, height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.14), transparent)" },
+  sysBarMeta: { fontSize: 10.5, fontWeight: 700, letterSpacing: 1.5, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace" },
+
+  // generic cockpit panel
+  panel: { position: "relative", overflow: "hidden", borderRadius: 18, border: `1px solid ${C.border}`,
+    padding: "16px 18px 18px",
+    background: "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.012))",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06), 0 20px 44px rgba(0,0,0,0.4)" },
+  panelGrid: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none", opacity: 0.5,
+    backgroundImage: "linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px)",
+    backgroundSize: "26px 26px", maskImage: "radial-gradient(120% 120% at 50% 0%, #000, transparent 75%)", WebkitMaskImage: "radial-gradient(120% 120% at 50% 0%, #000, transparent 75%)" },
+  panelGlow: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" },
+
+  // cockpit header
+  cockHead: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 8, marginBottom: 12 },
+  cockDot: { width: 6, height: 6, borderRadius: 999, flex: "0 0 auto" },
+  cockLabel: { fontSize: 10.5, fontWeight: 800, letterSpacing: 2, fontFamily: "ui-monospace, Menlo, monospace" },
+  cockRule: { flex: 1, height: 1, background: "linear-gradient(90deg, rgba(255,255,255,0.12), transparent)" },
+  cockRight: { fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace" },
+
+  // profile signal
+  profTop: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 14, marginBottom: 12 },
+  glyphCell: { position: "relative", flex: "0 0 auto", width: 52, height: 52, borderRadius: 14, display: "flex",
     alignItems: "center", justifyContent: "center", fontSize: 24, lineHeight: 1,
-    background: "linear-gradient(160deg, rgba(255,255,255,0.06), rgba(0,0,0,0.25))" },
-  archTopText: { minWidth: 0 },
-  archKicker: { fontSize: 10.5, fontWeight: 800, letterSpacing: 2.5, marginBottom: 4 },
-  archTitle: { fontSize: 30, fontWeight: 900, margin: 0, lineHeight: 1.08, letterSpacing: -0.4,
+    background: "linear-gradient(160deg, rgba(255,255,255,0.07), rgba(0,0,0,0.3))" },
+  glyphRing: { position: "absolute", inset: 5, borderRadius: 10, border: "1px solid" },
+  eyebrow: { fontSize: 10, fontWeight: 800, letterSpacing: 1.5, marginBottom: 4, fontFamily: "ui-monospace, Menlo, monospace" },
+  archTitle: { fontSize: 27, fontWeight: 900, margin: 0, lineHeight: 1.08, letterSpacing: -0.4,
     WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  identity: { position: "relative", zIndex: 2, fontSize: 16, fontWeight: 600, color: C.text, margin: "0 0 14px", lineHeight: 1.4 },
-  archHair: { position: "relative", zIndex: 2, display: "block", height: 1, width: "100%", margin: "0 0 13px" },
-  mirror: { position: "relative", zIndex: 2, fontSize: 14.5, color: "rgba(245,246,250,0.76)", lineHeight: 1.58, margin: 0 },
-  chips: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 8, marginTop: 18 },
-  chip: { fontSize: 11.5, fontWeight: 650, letterSpacing: 0.2, padding: "5px 11px", borderRadius: 999, border: "1px solid" },
+  identity: { position: "relative", zIndex: 2, fontSize: 15.5, fontWeight: 600, color: C.text, margin: "0 0 12px", lineHeight: 1.4 },
+  hair: { position: "relative", zIndex: 2, display: "block", height: 1, width: "100%", margin: "0 0 12px", background: "linear-gradient(90deg, rgba(255,255,255,0.16), transparent 80%)" },
+  mirror: { position: "relative", zIndex: 2, fontSize: 14, color: "rgba(245,246,250,0.74)", lineHeight: 1.56, margin: "0 0 16px" },
 
-  sectionHead: { display: "flex", alignItems: "center", gap: 12, margin: "10px 8px 2px" },
-  sectionRule: { flex: 1, height: 1, background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.14), transparent)" },
-  sectionText: { fontSize: 11, letterSpacing: 2, color: "rgba(245,246,250,0.62)", fontWeight: 700 },
+  // signal gauges
+  gaugeWrap: { position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", columnGap: 16, rowGap: 12, marginBottom: 16 },
+  gauge: { minWidth: 0 },
+  gaugeEnds: { display: "flex", justifyContent: "space-between", fontSize: 9.5, fontWeight: 700, letterSpacing: 0.4, color: C.dim, marginBottom: 5, fontFamily: "ui-monospace, Menlo, monospace" },
+  gaugeTrack: { position: "relative", height: 4, borderRadius: 4, background: "rgba(255,255,255,0.06)" },
+  gaugeAxis: { position: "absolute", left: "50%", top: -2, bottom: -2, width: 1, background: "rgba(255,255,255,0.16)" },
+  gaugeDot: { position: "absolute", top: "50%", width: 9, height: 9, borderRadius: 999, transform: "translate(-50%,-50%)" },
 
-  // Podium atmosphere + carousel (native scroll-snap, soft coverflow)
+  // tags
+  tagRow: { position: "relative", zIndex: 2, display: "flex", flexWrap: "wrap", gap: 7 },
+  sigTag: { display: "inline-flex", alignItems: "center", gap: 6, fontSize: 11.5, fontWeight: 650, letterSpacing: 0.2, padding: "5px 11px", borderRadius: 8, border: "1px solid" },
+  sigTagDot: { width: 5, height: 5, borderRadius: 999, flex: "0 0 auto" },
+
+  // route carousel (geometry unchanged for smooth, mobile-safe scrolling)
   stageWrap: { position: "relative", width: "100%" },
   atmosphere: { position: "absolute", inset: "-16% -12% -8%", pointerEvents: "none", zIndex: 0,
-    background:
-      "radial-gradient(58% 60% at 50% 40%, rgba(245,200,66,0.13), transparent 70%)," +
-      "radial-gradient(70% 50% at 50% 6%, rgba(120,150,210,0.06), transparent 62%)," +
-      "radial-gradient(120% 90% at 50% 54%, transparent 58%, rgba(0,0,0,0.34) 100%)" },
+    background: "radial-gradient(58% 60% at 50% 40%, rgba(245,200,66,0.13), transparent 70%), radial-gradient(70% 50% at 50% 6%, rgba(120,150,210,0.06), transparent 62%), radial-gradient(120% 90% at 50% 54%, transparent 58%, rgba(0,0,0,0.34) 100%)" },
   scroller: { position: "relative", zIndex: 1, display: "flex", flexDirection: "row", flexWrap: "nowrap",
-    alignItems: "center", justifyContent: "flex-start", height: 322, width: "100%",
-    overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory",
-    WebkitOverflowScrolling: "touch", perspective: "1200px",
+    alignItems: "center", justifyContent: "flex-start", height: 318, width: "100%",
+    overflowX: "auto", overflowY: "hidden", scrollSnapType: "x mandatory", WebkitOverflowScrolling: "touch", perspective: "1200px",
     padding: "0 calc(50% - 100px)",
-    // soft fade at the edges → side cards taper off intentionally instead of hard-clipping
     maskImage: "linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%)",
     WebkitMaskImage: "linear-gradient(90deg, transparent 0, #000 11%, #000 89%, transparent 100%)",
     scrollbarWidth: "none", msOverflowStyle: "none" },
-  snapItem: { flex: "0 0 200px", height: "100%", display: "flex", alignItems: "center",
-    justifyContent: "center", scrollSnapAlign: "center", margin: "0 -8px" }, // lighter overlap → more of each side card shows
-  podCard: { position: "relative", width: 230, minHeight: 224, boxSizing: "border-box", overflow: "hidden",
-    padding: "18px 20px 20px", borderRadius: "22px 22px 20px 18px", border: "1px solid",
+  snapItem: { flex: "0 0 200px", height: "100%", display: "flex", alignItems: "center", justifyContent: "center", scrollSnapAlign: "center", margin: "0 -8px" },
+  routeCard: { position: "relative", width: 230, minHeight: 222, boxSizing: "border-box", overflow: "hidden",
+    padding: "16px 16px 16px 18px", borderRadius: 16, border: "1px solid",
     textAlign: "left", font: "inherit", color: C.text, cursor: "pointer",
-    display: "flex", flexDirection: "column", gap: 10,
+    display: "flex", flexDirection: "column", gap: 11,
     transformOrigin: "center", backfaceVisibility: "hidden", willChange: "transform",
-    // only GPU-friendly props transition — NEVER width/height/padding (layout)
     transition: "transform .42s cubic-bezier(.22,.68,.2,1), box-shadow .35s ease, opacity .35s ease, border-color .35s ease" },
-  // soft overlays (one gloss + a gentle sweep on the hero)
-  cardGloss: { position: "absolute", top: 0, left: 0, right: 0, height: "52%", zIndex: 1, pointerEvents: "none",
-    borderRadius: "inherit",
-    background: "linear-gradient(180deg, rgba(255,255,255,0.08), rgba(255,255,255,0))" },
+  routeScan: { position: "absolute", inset: 0, zIndex: 1, pointerEvents: "none", borderRadius: "inherit", opacity: 0.5,
+    backgroundImage: "repeating-linear-gradient(0deg, rgba(255,255,255,0.04) 0 1px, transparent 1px 4px)",
+    maskImage: "linear-gradient(180deg, #000, transparent 70%)", WebkitMaskImage: "linear-gradient(180deg, #000, transparent 70%)" },
+  routeRail: { position: "absolute", top: 12, bottom: 12, left: 0, width: 3, borderRadius: 3, zIndex: 2, pointerEvents: "none" },
   cardSweep: { position: "absolute", top: 0, bottom: 0, left: 0, width: "40%", zIndex: 2, pointerEvents: "none",
-    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.12), transparent)",
-    animation: "auroCardSweep 7s ease-in-out infinite" },
-  // card content
-  cardHead: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 9 },
-  medallion: { flex: "0 0 auto", width: 28, height: 28, display: "inline-flex", alignItems: "center",
-    justifyContent: "center", borderRadius: 999, fontSize: 11, fontWeight: 800, letterSpacing: 0.3 },
-  medalLabel: { fontSize: 11.5, fontWeight: 750, letterSpacing: 0.2 },
-  cardMetaRow: { position: "relative", zIndex: 2, display: "flex", flexDirection: "column", gap: 1, marginTop: "auto", paddingTop: 6 },
-  cardMetaLabel: { fontSize: 10.5, fontWeight: 600, letterSpacing: 0.2 },
-  cardMetaVal: { fontSize: 15, fontWeight: 800, letterSpacing: -0.2 },
-  podName: { position: "relative", zIndex: 2, fontSize: 16.5, fontWeight: 800, color: C.text, lineHeight: 1.24, letterSpacing: -0.2,
+    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.12), transparent)", animation: "auroCardSweep 7s ease-in-out infinite" },
+  routeHead: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 8 },
+  rankMark: { fontSize: 12, fontWeight: 800, letterSpacing: 1, fontFamily: "ui-monospace, Menlo, monospace" },
+  routeKind: { fontSize: 8.5, fontWeight: 800, letterSpacing: 1.2, padding: "3px 7px", borderRadius: 6, border: "1px solid", marginLeft: "auto", fontFamily: "ui-monospace, Menlo, monospace" },
+  routeName: { position: "relative", zIndex: 2, fontSize: 17, fontWeight: 850, lineHeight: 1.22, letterSpacing: -0.2,
     display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 2, overflow: "hidden" },
-  podSummary: { position: "relative", zIndex: 2, fontSize: 13, lineHeight: 1.46,
-    display: "-webkit-box", WebkitBoxOrient: "vertical", WebkitLineClamp: 3, overflow: "hidden" },
+  routeCaps: { position: "relative", zIndex: 2, display: "flex", gap: 8, marginTop: "auto" },
 
-  // Path Info → personalized route briefing
-  infoCard: { position: "relative", overflow: "hidden",
-    background:
-      "radial-gradient(130% 70% at 0% 0%, rgba(255,255,255,0.045), transparent 56%)," +
-      "linear-gradient(180deg, rgba(255,255,255,0.04), rgba(255,255,255,0.012))",
-    border: `1px solid ${C.border}`, borderRadius: "22px 22px 22px 26px", padding: "18px 20px 18px",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05), 0 18px 38px rgba(0,0,0,0.36)" },
-  infoTopGlow: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" },
-  infoHeadRow: { position: "relative", zIndex: 2, display: "flex", alignItems: "center", gap: 8, marginBottom: 9 },
-  infoDot: { width: 7, height: 7, borderRadius: 999, flex: "0 0 auto" },
-  infoKicker: { fontSize: 11.5, fontWeight: 750, letterSpacing: 0.4 },
-  infoTitle: { position: "relative", zIndex: 2, fontSize: 23, fontWeight: 850, margin: "0 0 9px", lineHeight: 1.12, letterSpacing: -0.4,
+  // fit meter
+  fitWrap: { position: "relative", zIndex: 2 },
+  fitTop: { display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: 5 },
+  fitLabel: { fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace" },
+  fitVal: { fontSize: 13, fontWeight: 850, letterSpacing: 0.2 },
+  fitTrack: { position: "relative", height: 5, borderRadius: 5, overflow: "hidden", background: "rgba(255,255,255,0.07)" },
+  fitFill: { position: "absolute", left: 0, top: 0, bottom: 0, borderRadius: 5 },
+
+  // capsules
+  capsule: { flex: "1 1 0", minWidth: 0, display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", borderRadius: 10,
+    background: "rgba(0,0,0,0.22)", border: `1px solid ${C.border}` },
+  capTick: { width: 3, height: 22, borderRadius: 3, flex: "0 0 auto" },
+  capLabel: { fontSize: 8.5, fontWeight: 800, letterSpacing: 1, color: C.dim, fontFamily: "ui-monospace, Menlo, monospace", whiteSpace: "nowrap" },
+  capVal: { fontSize: 13.5, fontWeight: 800, letterSpacing: -0.2, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
+
+  // briefing
+  briefTitle: { position: "relative", zIndex: 2, fontSize: 22, fontWeight: 850, margin: "2px 0 9px", lineHeight: 1.12, letterSpacing: -0.4,
     WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  infoWhy: { position: "relative", zIndex: 2, fontSize: 14.5, color: C.text, opacity: 0.88, lineHeight: 1.52, margin: "0 0 16px" },
-  metaGrid: { position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr",
-    columnGap: 10, rowGap: 10, marginBottom: 16 },
-  metaItem: { display: "flex", flexDirection: "column", gap: 3, padding: "9px 12px", borderRadius: 12,
-    background: "rgba(255,255,255,0.035)", border: `1px solid ${C.border}` },
-  metaKey: { fontSize: 11, fontWeight: 600, color: C.dim, letterSpacing: 0.2 },
-  metaVal: { fontSize: 15, fontWeight: 800, letterSpacing: -0.2 },
-  sysLabel: { position: "relative", zIndex: 2, fontSize: 11.5, fontWeight: 700, color: "rgba(245,246,250,0.6)",
-    letterSpacing: 0.3, marginBottom: 9 },
-  reasonWrap: { position: "relative", zIndex: 2 },
-  reasonRow: { display: "flex", flexWrap: "wrap", gap: 7 },
-  reasonChip: { display: "inline-flex", alignItems: "center", fontSize: 12, fontWeight: 600,
-    letterSpacing: 0.1, padding: "6px 12px", borderRadius: 999 },
+  briefWhy: { position: "relative", zIndex: 2, fontSize: 14.5, color: C.text, opacity: 0.88, lineHeight: 1.52, margin: "0 0 14px" },
+  capGrid: { position: "relative", zIndex: 2, display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, margin: "14px 0 16px" },
+  capCell: { display: "flex", alignItems: "center", gap: 9, padding: "10px 12px", borderRadius: 12,
+    background: "rgba(0,0,0,0.2)", border: `1px solid ${C.border}` },
+  briefReasons: { position: "relative", zIndex: 2 },
+  miniLabel: { fontSize: 9.5, fontWeight: 800, letterSpacing: 1.5, color: C.dim, marginBottom: 9, fontFamily: "ui-monospace, Menlo, monospace" },
 
-  // CTA → soft premium key
+  // CTA
+  ctaWrap: { display: "flex", flexDirection: "column", gap: 8 },
+  ctaEyebrow: { fontSize: 10, fontWeight: 800, letterSpacing: 1.5, textAlign: "center", fontFamily: "ui-monospace, Menlo, monospace" },
   cta: { position: "relative", overflow: "hidden", width: "100%", padding: "16px 22px",
-    borderRadius: "18px 18px 18px 14px", border: "none", fontWeight: 800, fontSize: 16, letterSpacing: 0.2,
-    color: "#120d04", cursor: "pointer", marginTop: 4, transform: "scale(1)",
+    borderRadius: 14, border: "none", fontWeight: 850, fontSize: 16, letterSpacing: 0.2,
+    color: "#120d04", cursor: "pointer", transform: "scale(1)",
     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -3px 9px rgba(0,0,0,0.22), 0 14px 34px rgba(0,0,0,0.4)",
     transition: "transform .16s ease, filter .18s ease, box-shadow .22s ease" },
   ctaLabel: { position: "relative", zIndex: 1 },
   ctaSheen: { position: "absolute", top: 0, bottom: 0, left: 0, width: "40%", zIndex: 0, pointerEvents: "none",
-    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.42), transparent)",
-    animation: "auroSheen 6s ease-in-out infinite" },
+    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.42), transparent)", animation: "auroSheen 6s ease-in-out infinite" },
   ctaSub: { fontSize: 12.5, color: "rgba(245,246,250,0.6)", textAlign: "center" },
   debugBtn: { width: "100%", marginTop: 6, padding: "9px 12px", borderRadius: 10,
     border: `1px dashed ${C.border}`, background: "transparent", color: C.dim,
