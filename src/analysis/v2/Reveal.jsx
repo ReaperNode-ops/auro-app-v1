@@ -234,7 +234,7 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
   const [stage, setStage] = useState("lock"); // 'lock' → 'revealed'
   const [lockLabel, setLockLabel] = useState(0);
   const [selectedIndex, setSelectedIndex] = useState(0); // default = top pick
-  const [settledIndex, setSettledIndex] = useState(0); // debounced — drives the detail re-entry only
+  const [settledIndex, setSettledIndex] = useState(0); // debounced — drives the verdict/detail re-entry
   const [copied, setCopied] = useState(false); // debug-report copy feedback (temporary)
   const settleTimer = useRef(null);
 
@@ -245,8 +245,7 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
     return () => { clearInterval(labels); clearTimeout(done); };
   }, []);
 
-  // Debounce the detail re-animation: content follows selection live, but the
-  // entrance only replays ~140ms after a switch settles.
+  // Debounce the verdict/detail re-animation after a route switch settles.
   useEffect(() => {
     if (settleTimer.current) clearTimeout(settleTimer.current);
     settleTimer.current = setTimeout(() => setSettledIndex(selectedIndex), 140);
@@ -263,9 +262,8 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
 
   const safeIndex = Math.min(selectedIndex, Math.max(0, top3.length - 1));
   const selectedPath = top3[safeIndex] || null;
-  const medal = MEDAL[safeIndex] || MEDAL[0];
+  const accent = (MEDAL[safeIndex] || MEDAL[0]).accent;
   const detailKey = Math.min(settledIndex, Math.max(0, top3.length - 1));
-  const alts = top3.map((p, i) => ({ p, i })).filter((x) => x.i !== safeIndex);
 
   // ── TEMPORARY developer diagnostic: copy a full debug report to clipboard. ──
   async function handleCopyDebug() {
@@ -306,100 +304,91 @@ export default function Reveal({ derived, archetype, legacyAnswers, onContinue, 
     );
   }
 
-  const rankLabel = (i) => (i === 0 ? "Top match" : i === 1 ? "2nd match" : "3rd match");
+  const facts = selectedPath ? [
+    selectedPath.timeToFirst && ["First payday", selectedPath.timeToFirst],
+    selectedPath.difficulty && ["Difficulty", cap(selectedPath.difficulty)],
+    selectedPath.earnings && ["Est. earnings", selectedPath.earnings],
+  ].filter(Boolean) : [];
 
   return (
     <div style={St.wrap}>
       <Keyframes />
 
-      {/* 1: Identity reveal — clean, editorial, no card */}
-      <header style={{ ...St.identityWrap, animation: "auroUp .5s ease both" }}>
-        <span aria-hidden style={{ ...St.glyphMark, color: sty.accent }}>{sty.glyph}</span>
-        <div style={{ ...St.kicker, color: `${sty.accent}cc` }}>Your type</div>
-        <h1 style={{ ...St.archTitle, backgroundImage: `linear-gradient(116deg, ${sty.accent2}, ${sty.accent})` }}>{copy.title}</h1>
-        <p style={St.identityLine}>{copy.identity}</p>
+      {/* Verdict — the path title is the moment (solid, editorial; no gradient) */}
+      <header key={detailKey + "-v"} style={{ ...St.verdict, animation: "auroUp .5s ease both" }}>
+        <div style={{ ...St.verdictEyebrow, color: accent }}>
+          {safeIndex === 0 ? "Your strongest path" : "A strong alternative"}
+        </div>
+        <h1 style={St.verdictTitle}>{selectedPath.title}</h1>
+        <p style={St.verdictLead}>
+          {copy.title}. {copy.identity}
+        </p>
       </header>
 
-      {/* 2: The deck — hero cover + two slim alternates (the one selection mechanic) */}
-      <section style={St.deck}>
-        <div key={detailKey} style={{ ...St.hero, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
-          <span aria-hidden style={{ ...St.heroWash, background: `radial-gradient(120% 80% at 50% -12%, ${medal.accent}26, transparent 62%)` }} />
-          <div style={{ ...St.heroLabel, color: medal.accent }}>{rankLabel(safeIndex)}</div>
-          <h2 style={{ ...St.heroTitle, backgroundImage: `linear-gradient(120deg, ${medal.accent2}, ${medal.accent})` }}>{selectedPath.title}</h2>
-          {selectedPath.summary && <p style={St.heroSummary}>{selectedPath.summary}</p>}
-        </div>
+      {/* The spine — top 3 on a vertical route line; selected = filled node */}
+      <nav style={St.spine} aria-label="Your matches">
+        <span aria-hidden style={St.spineLine} />
+        {top3.map((p, i) => {
+          const on = i === safeIndex;
+          const a = (MEDAL[i] || MEDAL[0]).accent;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => setSelectedIndex(i)}
+              aria-pressed={on}
+              style={St.spineRow}
+            >
+              <span
+                aria-hidden
+                style={{
+                  ...St.node,
+                  ...(on
+                    ? { width: 15, height: 15, background: a, boxShadow: `0 0 0 5px ${a}22, 0 0 18px ${a}99` }
+                    : { width: 10, height: 10, background: "#0d0f14", border: `2px solid ${C.dim}` }),
+                }}
+              />
+              <span style={{ ...St.spineTitle, color: on ? C.text : "rgba(245,246,250,0.5)", fontSize: on ? 21 : 16, fontWeight: on ? 800 : 600 }}>
+                {p.title}
+              </span>
+              {p.earnings ? <span style={{ ...St.spineEarn, opacity: on ? 0.92 : 0.5 }}>{p.earnings}</span> : null}
+            </button>
+          );
+        })}
+      </nav>
 
-        {alts.length > 0 && (
-          <div style={St.altList}>
-            {alts.map(({ p, i }) => {
-              const m = MEDAL[i] || MEDAL[0];
-              return (
-                <button
-                  key={p.id}
-                  type="button"
-                  onClick={() => setSelectedIndex(i)}
-                  style={St.altRow}
-                  onPointerDown={(e) => { e.currentTarget.style.transform = "scale(0.99)"; }}
-                  onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-                  onPointerLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
-                >
-                  <span aria-hidden style={{ ...St.altDot, background: m.accent, boxShadow: `0 0 10px ${m.glow}` }} />
-                  <span style={St.altText}>
-                    <span style={St.altName}>{p.title}</span>
-                    <span style={St.altMeta}>{rankLabel(i)}{p.earnings ? ` \u00b7 ${p.earnings}` : ""}</span>
-                  </span>
-                  <span aria-hidden style={St.altChevron}>{"\u203A"}</span>
-                </button>
-              );
-            })}
-          </div>
+      {/* Explanation + inline facts — clean editorial, no boxes */}
+      <section key={detailKey + "-d"} style={{ ...St.detail, animation: "auroFade .4s ease both" }}>
+        <p style={St.why}>{whyCopy(selectedPath)}</p>
+        {facts.length > 0 && (
+          <p style={St.facts}>
+            {facts.map(([k, v], i) => (
+              <span key={k} style={St.factItem}>
+                {i > 0 && <span aria-hidden style={St.factSep}>{"\u00b7"}</span>}
+                <span style={St.factKey}>{k} </span>
+                <span style={St.factVal}>{v}</span>
+              </span>
+            ))}
+          </p>
         )}
       </section>
 
-      {/* 3 + 4: Why this fits + practical facts (about the selected path) */}
-      <section key={detailKey + "-d"} style={{ ...St.detail, animation: "auroInfoIn .42s cubic-bezier(.2,.7,.2,1) both" }}>
-        <div style={St.whyHead}>Why this fits</div>
-        <p style={St.whyText}>{whyCopy(selectedPath)}</p>
-        <MetaRow path={selectedPath} accent={medal.accent} />
-      </section>
-
-      {/* 5: CTA */}
+      {/* CTA — solid, simple */}
       <button
-        style={{ ...St.cta, backgroundImage: `linear-gradient(135deg, ${medal.accent2}, ${medal.accent})` }}
+        style={{ ...St.cta, background: accent }}
         onClick={() => onContinue(selectedPath)}
         onPointerDown={(e) => { e.currentTarget.style.transform = "scale(0.985)"; }}
         onPointerUp={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
         onPointerLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
       >
-        <span aria-hidden style={St.ctaSheen} />
-        <span style={St.ctaLabel}>Begin {selectedPath.title} Path</span>
+        Begin {selectedPath.title} Path
       </button>
       <div style={St.ctaSub}>You can explore the other paths anytime.</div>
 
-      {/* 6: TEMPORARY developer diagnostic — remove with debugReport.js when done. */}
+      {/* TEMPORARY developer diagnostic — remove with debugReport.js when done. */}
       <button type="button" style={St.debugBtn} onClick={handleCopyDebug}>
         {copied ? "Copied \u2713" : "Copy debug report"}
       </button>
-    </div>
-  );
-}
-
-// ── Clean facts row: first payday · difficulty · est. earnings ──────────────
-function MetaRow({ path, accent }) {
-  const items = [
-    path.timeToFirst && { k: "First payday", v: path.timeToFirst },
-    path.difficulty && { k: "Difficulty", v: cap(path.difficulty) },
-    path.earnings && { k: "Est. earnings", v: path.earnings, accent: true },
-  ].filter(Boolean);
-  if (!items.length) return null;
-  return (
-    <div style={St.metaRow}>
-      {items.map((m, i) => (
-        <div key={m.k} style={{ ...St.metaCell, borderLeft: i === 0 ? "none" : `1px solid ${C.border}` }}>
-          <div style={St.metaKey}>{m.k}</div>
-          <div style={{ ...St.metaVal, color: m.accent ? accent : C.text }}>{m.v}</div>
-        </div>
-      ))}
     </div>
   );
 }
@@ -418,75 +407,57 @@ function Keyframes() {
   return (
     <style>{`
       @keyframes auroUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+      @keyframes auroFade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
       @keyframes auroSpin2 { to { transform: rotate(360deg); } }
       @keyframes auroBreath { 0%,100% { opacity: .5; transform: scale(1); } 50% { opacity: 1; transform: scale(1.08); } }
-      @keyframes auroInfoIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
-      @keyframes auroSheen { 0% { transform: translateX(-140%) skewX(-18deg); } 55%,100% { transform: translateX(360%) skewX(-18deg); } }
     `}</style>
   );
 }
 
-// ── Styles (Auro — editorial, restrained) ───────────────────────────────────
+// ── Styles (Auro — composed, editorial) ─────────────────────────────────────
 const St = {
-  wrap: { width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", gap: 34 },
+  wrap: { width: "100%", maxWidth: 460, display: "flex", flexDirection: "column", gap: 30 },
 
-  // lock
   lockWrap: { display: "flex", flexDirection: "column", alignItems: "center", gap: 26, padding: "70px 0" },
   lockLabel: { fontSize: 14, letterSpacing: 1, color: C.dim },
   ringOuter: { position: "relative", width: 84, height: 84 },
   ring: { position: "absolute", inset: 0, borderRadius: "50%", border: `3px solid ${C.border}`, animation: "auroSpin2 0.9s linear infinite" },
   ringDot: { position: "absolute", top: "50%", left: "50%", width: 10, height: 10, borderRadius: "50%", transform: "translate(-50%,-50%)", animation: "auroBreath 1s ease-in-out infinite" },
 
-  // identity reveal
-  identityWrap: { position: "relative", paddingTop: 6 },
-  glyphMark: { position: "absolute", top: -18, right: -4, fontSize: 96, lineHeight: 1, opacity: 0.08, pointerEvents: "none", userSelect: "none" },
-  kicker: { fontSize: 12.5, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", marginBottom: 10 },
-  archTitle: { fontSize: 38, fontWeight: 900, margin: 0, lineHeight: 1.04, letterSpacing: -0.8,
-    WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  identityLine: { fontSize: 17, color: "rgba(245,246,250,0.7)", lineHeight: 1.5, margin: "14px 0 0", maxWidth: 420 },
+  // verdict
+  verdict: { paddingTop: 4 },
+  verdictEyebrow: { fontSize: 13, fontWeight: 700, letterSpacing: 1, marginBottom: 12 },
+  verdictTitle: { fontSize: 40, fontWeight: 850, color: C.text, lineHeight: 1.04, letterSpacing: -1, margin: 0 },
+  verdictLead: { fontSize: 16, color: "rgba(245,246,250,0.66)", lineHeight: 1.52, margin: "16px 0 0", maxWidth: 420 },
 
-  // deck
-  deck: { display: "flex", flexDirection: "column", gap: 12 },
-  hero: { position: "relative", overflow: "hidden", borderRadius: 24, padding: "26px 24px 28px",
-    background: "linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02))",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.08), 0 26px 60px rgba(0,0,0,0.44)" },
-  heroWash: { position: "absolute", inset: 0, zIndex: 0, pointerEvents: "none" },
-  heroLabel: { position: "relative", zIndex: 1, fontSize: 13, fontWeight: 750, letterSpacing: 0.4, marginBottom: 10 },
-  heroTitle: { position: "relative", zIndex: 1, fontSize: 29, fontWeight: 850, margin: 0, lineHeight: 1.1, letterSpacing: -0.5,
-    WebkitBackgroundClip: "text", backgroundClip: "text", color: "transparent", WebkitTextFillColor: "transparent" },
-  heroSummary: { position: "relative", zIndex: 1, fontSize: 15.5, color: "rgba(245,246,250,0.78)", lineHeight: 1.5, margin: "12px 0 0" },
+  // spine
+  spine: { position: "relative", display: "flex", flexDirection: "column" },
+  spineLine: { position: "absolute", left: 11, top: 22, bottom: 22, width: 2, borderRadius: 2,
+    background: `linear-gradient(180deg, transparent, ${C.border} 12%, ${C.border} 88%, transparent)` },
+  spineRow: { position: "relative", display: "flex", alignItems: "center", gap: 14, width: "100%",
+    padding: "16px 2px 16px 38px", background: "transparent", border: "none", textAlign: "left",
+    color: C.text, cursor: "pointer", font: "inherit" },
+  node: { position: "absolute", left: 12, top: "50%", transform: "translate(-50%,-50%)", borderRadius: "50%", boxSizing: "border-box" },
+  spineTitle: { lineHeight: 1.22, letterSpacing: -0.2, transition: "color .2s ease, font-size .2s ease",
+    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", flex: 1, minWidth: 0 },
+  spineEarn: { flex: "0 0 auto", marginLeft: 12, fontSize: 13.5, fontWeight: 600, color: C.dim },
 
-  // alternates (slim, list-like — not boxes)
-  altList: { display: "flex", flexDirection: "column" },
-  altRow: { display: "flex", alignItems: "center", gap: 14, width: "100%", padding: "15px 6px", background: "transparent",
-    border: "none", borderTop: `1px solid ${C.border}`, textAlign: "left", font: "inherit", color: C.text,
-    cursor: "pointer", transition: "transform .14s ease, opacity .2s ease" },
-  altDot: { flex: "0 0 auto", width: 9, height: 9, borderRadius: "50%" },
-  altText: { display: "flex", flexDirection: "column", gap: 2, minWidth: 0, flex: 1 },
-  altName: { fontSize: 16, fontWeight: 700, letterSpacing: -0.2, lineHeight: 1.25, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" },
-  altMeta: { fontSize: 13, color: C.dim },
-  altChevron: { flex: "0 0 auto", fontSize: 22, color: C.dim, lineHeight: 1 },
-
-  // detail (why + facts)
-  detail: { display: "flex", flexDirection: "column" },
-  whyHead: { fontSize: 12.5, fontWeight: 700, letterSpacing: 2, textTransform: "uppercase", color: C.dim, marginBottom: 12 },
-  whyText: { fontSize: 16.5, color: C.text, opacity: 0.92, lineHeight: 1.58, margin: 0 },
-  metaRow: { display: "flex", marginTop: 24 },
-  metaCell: { flex: 1, display: "flex", flexDirection: "column", gap: 5, padding: "0 16px" },
-  metaKey: { fontSize: 12.5, color: C.dim, letterSpacing: 0.2 },
-  metaVal: { fontSize: 17, fontWeight: 800, letterSpacing: -0.2, lineHeight: 1.2 },
+  // explanation + inline facts
+  detail: {},
+  why: { fontSize: 16.5, color: C.text, opacity: 0.9, lineHeight: 1.6, margin: 0 },
+  facts: { display: "flex", flexWrap: "wrap", alignItems: "baseline", fontSize: 14.5, lineHeight: 1.7, margin: "18px 0 0" },
+  factItem: { display: "inline-flex", alignItems: "baseline" },
+  factSep: { margin: "0 10px", color: "rgba(245,246,250,0.28)" },
+  factKey: { color: C.dim },
+  factVal: { color: C.text, fontWeight: 750 },
 
   // CTA
-  cta: { position: "relative", overflow: "hidden", width: "100%", padding: "18px 22px",
-    borderRadius: 18, border: "none", fontWeight: 850, fontSize: 16.5, letterSpacing: 0.2,
-    color: "#120d04", cursor: "pointer", transform: "scale(1)",
-    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.55), inset 0 -3px 9px rgba(0,0,0,0.22), 0 16px 38px rgba(0,0,0,0.42)",
-    transition: "transform .16s ease, filter .18s ease, box-shadow .22s ease" },
-  ctaLabel: { position: "relative", zIndex: 1 },
-  ctaSheen: { position: "absolute", top: 0, bottom: 0, left: 0, width: "40%", zIndex: 0, pointerEvents: "none",
-    background: "linear-gradient(100deg, transparent, rgba(255,255,255,0.42), transparent)", animation: "auroSheen 6s ease-in-out infinite" },
-  ctaSub: { fontSize: 13, color: "rgba(245,246,250,0.6)", textAlign: "center", marginTop: -18 },
+  cta: { width: "100%", padding: "18px 22px", borderRadius: 16, border: "none", color: "#120d04",
+    fontWeight: 850, fontSize: 16.5, letterSpacing: 0.2, cursor: "pointer", transform: "scale(1)",
+    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.5), 0 14px 30px rgba(0,0,0,0.4)",
+    transition: "transform .16s ease, filter .18s ease" },
+  ctaSub: { fontSize: 13, color: "rgba(245,246,250,0.55)", textAlign: "center", marginTop: -18 },
   debugBtn: { width: "100%", padding: "9px 12px", borderRadius: 10, border: `1px dashed ${C.border}`,
     background: "transparent", color: C.dim, fontSize: 12, letterSpacing: 0.5, cursor: "pointer",
-    fontFamily: "ui-monospace, Menlo, monospace", marginTop: -16 },
+    fontFamily: "ui-monospace, Menlo, monospace", marginTop: -14 },
 };
