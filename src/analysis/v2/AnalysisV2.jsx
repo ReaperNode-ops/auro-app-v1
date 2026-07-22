@@ -286,15 +286,15 @@ function DebugPanel({ phase, session, currentId }) {
 // ── Styles (Auro idiom) ──────────────────────────────────────────────────────────
 const S = {
   shell: {
-    position: "relative", minHeight: "100dvh", background: C.bg, color: C.text,
+    position: "relative", minHeight: 560, background: "transparent", color: C.text,
     display: "flex", alignItems: "center", justifyContent: "center",
-    overflow: "hidden", padding: "32px 20px",
-    fontFamily: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif",
+    overflow: "hidden", padding: "20px 0",
+    fontFamily: "Manrope, system-ui, sans-serif",
   },
   stage: { position: "relative", zIndex: 2, width: "100%", maxWidth: 560,
-    display: "flex", flexDirection: "column", alignItems: "center", gap: 26 },
+    display: "flex", flexDirection: "column", alignItems: "center", gap: 26, padding: "8px 4px" },
   kicker: { letterSpacing: 4, fontSize: 12, color: C.gold, fontWeight: 700, marginBottom: 14 },
-  h1: { fontSize: 30, lineHeight: 1.18, fontWeight: 800, margin: "0 0 14px" },
+  h1: { fontSize: "clamp(30px,7vw,44px)", lineHeight: 1.12, fontWeight: 800, margin: "0 0 14px" },
   sub: { color: C.dim, fontSize: 15, lineHeight: 1.5, margin: "0 0 26px" },
   prompt: { fontSize: 22, fontWeight: 750, lineHeight: 1.3, margin: "0 0 8px", textAlign: "center" },
   hint: { color: C.dim, fontSize: 13, textAlign: "center", marginBottom: 16 },
