@@ -2464,7 +2464,12 @@ function VerificationGate({ email, onVerified, onSignOut }) {
     <>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0;}
-        body{background:${T.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:${T.text};-webkit-font-smoothing:antialiased;}
+        body{background:${T.bg};font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:${T.text};-webkit-font-smoothing:antialiased;}
+        body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 68%);}
+        h1,h2,h3{font-family:'Playfair Display',Georgia,serif!important;letter-spacing:-.035em;}
+        button{transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s ease,border-color .2s ease,background .2s ease!important;}
+        button:hover:not(:disabled){transform:translateY(-2px)!important;filter:brightness(1.08);}
+        input,textarea{font-family:'Manrope',sans-serif!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.035);}
         @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         button:active{opacity:0.82;transform:scale(0.97)!important;}
         input:focus{border-color:${T.gold}!important;}
@@ -2913,7 +2918,12 @@ export default function App() {
     <>
       <style>{`
         *{box-sizing:border-box;margin:0;padding:0;}
-        body{background:${T.bg};font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:${T.text};-webkit-font-smoothing:antialiased;}
+        body{background:${T.bg};font-family:'Manrope',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:${T.text};-webkit-font-smoothing:antialiased;}
+        body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.16;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.02) 1px,transparent 1px);background-size:42px 42px;mask-image:linear-gradient(to bottom,black,transparent 68%);}
+        h1,h2,h3{font-family:'Playfair Display',Georgia,serif!important;letter-spacing:-.035em;}
+        button{transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s ease,border-color .2s ease,background .2s ease!important;}
+        button:hover:not(:disabled){transform:translateY(-2px)!important;filter:brightness(1.08);}
+        input,textarea{font-family:'Manrope',sans-serif!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.035);}
         @keyframes fadeIn{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
         @keyframes slideIn{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
         @keyframes toastIn{from{opacity:0;transform:translateY(16px) scale(0.96)}to{opacity:1;transform:translateY(0) scale(1)}}
@@ -2951,11 +2961,11 @@ export default function App() {
           </div>
         </div>
       )}
-      <div style={{ minHeight:"100vh", background:T.gradHero, display:"flex", flexDirection:"column", justifyContent:"flex-start", alignItems:"center", paddingBottom:0 }}>
+      <div style={{ minHeight:"100vh", background:T.gradHero, display:"flex", flexDirection:"column", justifyContent:"flex-start", alignItems:"center", paddingBottom:0, position:"relative" }}>
 
         {/* Main content */}
-        <div style={{ width:"100%", maxWidth:480, flex:1, padding:"28px 16px 100px" }}>
-          <div style={{ background:T.surface, borderRadius:26, padding:"28px 22px", border:`1px solid ${T.border}`, boxShadow:"0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(255,255,255,0.03)", position:"relative", overflow:"hidden" }}>
+        <div style={{ width:"100%", maxWidth:560, flex:1, padding:"clamp(20px,5vw,52px) 16px 112px", position:"relative" }}>
+          <div style={{ background:"linear-gradient(145deg,rgba(24,29,45,.94),rgba(12,15,26,.9))", borderRadius:30, padding:"clamp(22px,5vw,34px)", border:`1px solid ${T.border}`, boxShadow:"0 28px 100px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.06)", position:"relative", overflow:"hidden", backdropFilter:"blur(18px)" }}>
             {screen === "landing" && (
   USE_ANALYSIS_V2 ? (
     <AnalysisV2
@@ -3091,7 +3101,7 @@ export default function App() {
 
         {/* Bottom nav bar */}
         <div style={{ position:"fixed", bottom:0, left:0, right:0, zIndex:100, display:"flex", justifyContent:"center" }}>
-          <div style={{ width:"100%", maxWidth:480, background:`${T.surface}ee`, backdropFilter:"blur(20px)", WebkitBackdropFilter:"blur(20px)", borderTop:`1px solid ${T.border}`, display:"flex", alignItems:"center", justifyContent:"space-around", padding:"10px 8px 18px" }}>
+          <div style={{ width:"calc(100% - 24px)", maxWidth:536, marginBottom:12, background:"rgba(18,22,35,.86)", backdropFilter:"blur(24px)", WebkitBackdropFilter:"blur(24px)", border:`1px solid ${T.border}`, borderRadius:22, display:"flex", alignItems:"center", justifyContent:"space-around", padding:"10px 8px 12px", boxShadow:"0 12px 38px rgba(0,0,0,.34)" }}>
             {NAV.map(tab => {
               const isActive = activeNav === tab.id;
               const accentCol = tab.id === "subscription" ? T.gold : tab.id === "chat" ? T.accent : T.primary;
